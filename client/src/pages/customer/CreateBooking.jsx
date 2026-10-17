@@ -21,7 +21,8 @@ export default function CreateBooking() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const preselectedCategory = searchParams.get('categoryId') || '';
+  const rawCat = searchParams.get('categoryId');
+  const preselectedCategory = rawCat && rawCat !== 'undefined' && rawCat !== 'null' ? rawCat : '';
   const preselectedTech = searchParams.get('technicianId') || '';
 
   const [categories, setCategories] = useState([]);

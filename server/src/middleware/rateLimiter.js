@@ -10,23 +10,33 @@ const apiLimiter = rateLimit({
   max: config.rateLimit.maxRequests,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Never block test suite
+    if (config.env === 'test') return true;
+    // In development mode, allow localhost/loopback requests without restriction
+    if (config.env === 'development' && (req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1')) {
+      return true;
+    }
+    return false;
+  },
   handler: (req, res) => {
     return apiResponse.error(
       res,
-      'Too many requests from this IP, please try again after 15 minutes',
+      'Too many requests from this IP, please try again after a few minutes',
       429
     );
   }
 });
 
 /**
- * Stricter rate limiter for sensitive authentication endpoints
+ * Rate limiter for sensitive authentication endpoints
  */
 const authLimiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.authMax,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => config.env === 'test',
   handler: (req, res) => {
     return apiResponse.error(
       res,

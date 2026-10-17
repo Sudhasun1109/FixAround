@@ -13,7 +13,7 @@ async function getAll(req, res, next) {
 
 async function getById(req, res, next) {
   try {
-    const category = await serviceService.getById(parseInt(req.params.id, 10));
+    const category = await serviceService.getById(req.params.id);
     return apiResponse.success(res, category, 'Service category retrieved');
   } catch (err) {
     next(err);

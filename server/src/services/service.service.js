@@ -25,11 +25,17 @@ async function getAll(options = {}) {
 }
 
 /**
- * Get service category by ID
- * @param {number} id
+ * Get service category by ID or Slug
+ * @param {number|string} identifier
  */
-async function getById(id) {
-  const category = await serviceRepo.findById(id);
+async function getById(identifier) {
+  let category = null;
+  if (/^\d+$/.test(String(identifier))) {
+    category = await serviceRepo.findById(parseInt(identifier, 10));
+  }
+  if (!category) {
+    category = await serviceRepo.findBySlug(String(identifier));
+  }
   if (!category) {
     throw AppError.notFound('Service category not found');
   }

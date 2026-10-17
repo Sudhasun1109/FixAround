@@ -13,12 +13,24 @@ const { pool } = require('../config/database');
  * @param {Object} data
  */
 async function create(customerId, data) {
-  // Validate category
-  const category = await serviceRepo.findById(data.category_id);
+  // Validate and resolve category (supports category_id, categoryId, or slug)
+  const rawCatId = data.category_id || data.categoryId;
+  if (!rawCatId || rawCatId === 'undefined' || rawCatId === 'null') {
+    throw AppError.badRequest('Please select a valid service category');
+  }
+
+  let category = null;
+  if (/^\d+$/.test(String(rawCatId))) {
+    category = await serviceRepo.findById(parseInt(rawCatId, 10));
+  } else {
+    category = await serviceRepo.findBySlug(String(rawCatId));
+  }
+
   if (!category || !category.is_active) {
     throw AppError.badRequest('Invalid or inactive service category selected');
   }
 
+  const resolvedCategoryId = category.id;
   const bookingNumber = generateBookingNumber();
 
   const conn = await pool.getConnection();
@@ -29,7 +41,7 @@ async function create(customerId, data) {
     bookingId = await bookingRepo.create({
       booking_number: bookingNumber,
       customer_id: customerId,
-      category_id: data.category_id,
+      category_id: resolvedCategoryId,
       address_id: data.address_id || null,
       title: data.title,
       description: data.description || null,

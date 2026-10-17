@@ -152,8 +152,15 @@ async function updateSkills(userId, skillsList) {
     // Insert new skills
     if (Array.isArray(skillsList) && skillsList.length > 0) {
       for (const item of skillsList) {
-        const catId = typeof item === 'object' ? item.categoryId : item;
-        const exp = typeof item === 'object' && item.yearsExperience ? item.yearsExperience : 0;
+        const catId = typeof item === 'object'
+          ? (item.categoryId || item.category_id || item.id)
+          : item;
+        const exp = typeof item === 'object'
+          ? (item.yearsExperience ?? item.years_experience ?? 0)
+          : 0;
+
+        if (!catId) continue;
+
         await conn.query(
           'INSERT INTO technician_skills (technician_id, category_id, years_experience) VALUES (?, ?, ?)',
           [profile.id, catId, exp]

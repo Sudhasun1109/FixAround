@@ -21,7 +21,8 @@ export default function EmergencyRequest() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const queryCat = searchParams.get('categoryId') || '';
+  const rawCat = searchParams.get('categoryId');
+  const queryCat = rawCat && rawCat !== 'undefined' && rawCat !== 'null' ? rawCat : '';
   const queryAddr = searchParams.get('address') || '';
   const queryDesc = searchParams.get('desc') || '';
 

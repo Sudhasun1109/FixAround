@@ -6,6 +6,7 @@ import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import { showToast } from '../../components/common/Toast';
 import { LogIn, Lock, Mail, Wrench, ShieldCheck, User } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function Login() {
   const { login } = useAuth();
@@ -86,6 +87,7 @@ export default function Login() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            
             <Input
               label="Email Address"
               type="email"
@@ -119,9 +121,12 @@ export default function Login() {
               >
                 Sign In
               </Button>
+             
             </div>
-          </form>
+             <GoogleLogin onSuccess={credentialResponse => { console.log(credentialResponse); }} onError={() => { console.log('Login Failed'); }} ></GoogleLogin>
 
+          </form>
+          
           {/* Quick Demo Logins for Testing */}
           <div className="mt-6 pt-5 border-t border-slate-100">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block text-center mb-2.5">

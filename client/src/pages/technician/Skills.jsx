@@ -52,29 +52,37 @@ export default function Skills() {
   }, [user?.id]);
 
   const handleAddSkill = (cat) => {
-    if (technicianSkills.some((s) => String(s.category_id) === String(cat.id))) {
+    if (!cat || !cat.id) {
+      showToast.error('Invalid category selection.');
+      return;
+    }
+    const catId = cat.id;
+    if (technicianSkills.some((s) => String(s.category_id || s.categoryId) === String(catId))) {
       showToast.info('This category is already added to your skills.');
       return;
     }
     setTechnicianSkills((prev) => [
       ...prev,
       {
-        category_id: cat.id,
+        categoryId: catId,
+        category_id: catId,
         name: cat.name,
+        yearsExperience: 2,
         years_experience: 2,
       },
     ]);
   };
 
   const handleRemoveSkill = (catId) => {
-    setTechnicianSkills((prev) => prev.filter((s) => String(s.category_id) !== String(catId)));
+    setTechnicianSkills((prev) => prev.filter((s) => String(s.category_id || s.categoryId) !== String(catId)));
   };
 
   const handleExperienceChange = (catId, years) => {
+    const parsedYears = Math.max(0, parseInt(years, 10) || 0);
     setTechnicianSkills((prev) =>
       prev.map((s) =>
-        String(s.category_id) === String(catId)
-          ? { ...s, years_experience: Math.max(0, parseInt(years, 10) || 0) }
+        String(s.category_id || s.categoryId) === String(catId)
+          ? { ...s, years_experience: parsedYears, yearsExperience: parsedYears }
           : s
       )
     );
@@ -88,7 +96,16 @@ export default function Skills() {
 
     try {
       setSaving(true);
-      await techniciansApi.updateSkills(technicianSkills);
+      const payload = technicianSkills
+        .filter((s) => s.category_id || s.categoryId)
+        .map((s) => ({
+          categoryId: s.category_id || s.categoryId,
+          category_id: s.category_id || s.categoryId,
+          yearsExperience: s.years_experience ?? s.yearsExperience ?? 0,
+          years_experience: s.years_experience ?? s.yearsExperience ?? 0,
+        }));
+
+      await techniciansApi.updateSkills(payload);
       showToast.success('Your skill competencies have been updated successfully.');
     } catch (err) {
       showToast.error(err.message || 'Failed to update skills');
