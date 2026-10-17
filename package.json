@@ -1,0 +1,20 @@
+{
+  "name": "fixaround",
+  "version": "1.0.0",
+  "description": "FixAround — Smart Local Service & Emergency Repair Platform",
+  "private": true,
+  "scripts": {
+    "install:all": "cd server && npm install && cd ../client && npm install",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "build:client": "cd client && npm run build",
+    "start:server": "cd server && npm start",
+    "test": "cd server && npm test",
+    "db:schema": "cd server && node scripts/runSchema.js",
+    "db:seed": "cd server && node scripts/runSeed.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

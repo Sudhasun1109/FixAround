@@ -1,0 +1,523 @@
+{
+  "info": {
+    "name": "FixAround API",
+    "description": "FixAround — Smart Local Service & Emergency Repair Platform API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api/v1" },
+    { "key": "token", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "techToken", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register Customer",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newcustomer@example.com\",\n  \"password\": \"Password123!\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"Customer\",\n  \"phone\": \"9100000099\",\n  \"role\": \"customer\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register Technician",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newtech@example.com\",\n  \"password\": \"Password123!\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"Technician\",\n  \"phone\": \"9200000099\",\n  \"role\": \"technician\",\n  \"bio\": \"Professional plumber\",\n  \"experienceYears\": 5,\n  \"skills\": [2],\n  \"serviceCity\": \"New Delhi\",\n  \"serviceRadiusKm\": 10,\n  \"latitude\": 28.6139,\n  \"longitude\": 77.2090\n}"
+            }
+          }
+        },
+        {
+          "name": "Login (Customer)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["var jsonData = pm.response.json();\nif (jsonData.data && jsonData.data.token) {\n  pm.collectionVariables.set('token', jsonData.data.token);\n}"]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"priya.sharma@example.com\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login (Admin)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["var jsonData = pm.response.json();\nif (jsonData.data && jsonData.data.token) {\n  pm.collectionVariables.set('adminToken', jsonData.data.token);\n}"]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@fixaround.com\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login (Technician)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["var jsonData = pm.response.json();\nif (jsonData.data && jsonData.data.token) {\n  pm.collectionVariables.set('techToken', jsonData.data.token);\n}"]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"suresh.electrician@example.com\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Services",
+      "item": [
+        {
+          "name": "List Services",
+          "request": { "method": "GET", "url": "{{baseUrl}}/services" }
+        },
+        {
+          "name": "Get Service by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/services/1" }
+        },
+        {
+          "name": "Create Service (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/services",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"CCTV Installation\",\n  \"slug\": \"cctv-installation\",\n  \"description\": \"CCTV camera installation and setup\",\n  \"icon\": \"Camera\",\n  \"minPrice\": 500,\n  \"maxPrice\": 10000,\n  \"inspectionCharge\": 199,\n  \"warrantyPeriodDays\": 15\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Technicians",
+      "item": [
+        {
+          "name": "List Technicians",
+          "request": { "method": "GET", "url": "{{baseUrl}}/technicians" }
+        },
+        {
+          "name": "Get Technician Profile",
+          "request": { "method": "GET", "url": "{{baseUrl}}/technicians/5" }
+        },
+        {
+          "name": "Find Nearby Technicians",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/technicians/nearby?latitude=28.6468&longitude=77.1215&radiusKm=15&categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["technicians", "nearby"],
+              "query": [
+                { "key": "latitude", "value": "28.6468" },
+                { "key": "longitude", "value": "77.1215" },
+                { "key": "radiusKm", "value": "15" },
+                { "key": "categoryId", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Toggle Availability (Tech)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/technicians/availability",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{techToken}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"isAvailable\": true,\n  \"isOnline\": true\n}" }
+          }
+        },
+        {
+          "name": "Verify Technician (Admin)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/technicians/9/verify",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"approved\",\n  \"notes\": \"Documents verified\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Create Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bookings",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": 1,\n  \"title\": \"Switch not working\",\n  \"description\": \"Light switch in kitchen needs replacement\",\n  \"isEmergency\": false,\n  \"urgency\": \"normal\",\n  \"addressId\": 1,\n  \"customerLatitude\": 28.6468,\n  \"customerLongitude\": 77.1215,\n  \"customerAddress\": \"42 Rajouri Garden, New Delhi\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Emergency Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bookings",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": 5,\n  \"title\": \"Bike breakdown on road\",\n  \"description\": \"Bike won't start, stuck near Dwarka metro\",\n  \"isEmergency\": true,\n  \"urgency\": \"emergency\",\n  \"customerLatitude\": 28.5823,\n  \"customerLongitude\": 77.0500,\n  \"customerAddress\": \"Near Dwarka Sector 10 Metro\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List My Bookings",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/bookings",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] }
+          }
+        },
+        {
+          "name": "Get Booking Detail",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/bookings/1",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] }
+          }
+        },
+        {
+          "name": "Accept Booking (Tech)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bookings/1/accept",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{techToken}}" }] }
+          }
+        },
+        {
+          "name": "Reject Booking (Tech)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bookings/1/reject",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{techToken}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Currently busy with another job\"\n}" }
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bookings/1/cancel",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Found another service\"\n}" }
+          }
+        },
+        {
+          "name": "Update Status (Tech)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/bookings/1/status",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{techToken}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"ON_THE_WAY\",\n  \"notes\": \"Leaving now, ETA 20 minutes\"\n}" }
+          }
+        },
+        {
+          "name": "Get Booking Timeline",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/bookings/1/timeline",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Estimates",
+      "item": [
+        {
+          "name": "Submit Estimate (Tech)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bookings/1/estimates",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{techToken}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"laborCharge\": 200,\n  \"materialCharge\": 150,\n  \"inspectionCharge\": 99,\n  \"additionalCharge\": 0,\n  \"breakdownNotes\": \"Labor: Switch replacement\\nMaterial: New modular switch\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Estimates for Booking",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/bookings/1/estimates",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] }
+          }
+        },
+        {
+          "name": "Approve Estimate",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bookings/1/estimates/1/approve",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] }
+          }
+        },
+        {
+          "name": "Reject Estimate",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bookings/1/estimates/1/reject",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Price is too high\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Initiate Payment",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bookings/1/payments",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"paymentMethod\": \"SANDBOX\"\n}" }
+          }
+        },
+        {
+          "name": "Verify Sandbox Payment",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/payments/1/verify",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] }
+          }
+        },
+        {
+          "name": "My Payment History",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/my-payments",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        {
+          "name": "Submit Review",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bookings/1/reviews",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"rating\": 5,\n  \"title\": \"Great service!\",\n  \"comment\": \"Very professional and quick work.\"\n}" }
+          }
+        },
+        {
+          "name": "Technician Reviews",
+          "request": { "method": "GET", "url": "{{baseUrl}}/technicians/5/reviews" }
+        }
+      ]
+    },
+    {
+      "name": "Warranty Claims",
+      "item": [
+        {
+          "name": "Create Claim",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bookings/1/claims",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"issueDescription\": \"Fan stopped working again after 2 days\",\n  \"evidenceNotes\": \"Same humming noise as before\"\n}" }
+          }
+        },
+        {
+          "name": "My Claims",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/my-claims",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] }
+          }
+        },
+        {
+          "name": "Resolve Claim (Admin)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/claims/1/resolve",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"APPROVED\",\n  \"resolutionType\": \"RE_SERVICE\",\n  \"resolutionNotes\": \"Free re-service approved within 48 hours\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] }
+          }
+        },
+        {
+          "name": "Mark as Read",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/notifications/1/read",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] }
+          }
+        },
+        {
+          "name": "Unread Count",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications/unread-count",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/dashboard",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/users",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }
+          }
+        },
+        {
+          "name": "Toggle User Status",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/users/2/status",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"isActive\": false\n}" }
+          }
+        },
+        {
+          "name": "Get Settings",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/settings",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }
+          }
+        },
+        {
+          "name": "Update Setting",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/admin/settings/platform_commission_percent",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"value\": \"20\"\n}" }
+          }
+        },
+        {
+          "name": "Audit Logs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/audit-logs",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] }
+          }
+        },
+        {
+          "name": "Reassign Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/bookings/4/reassign",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"technicianId\": 8\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Earnings (Technician)",
+      "item": [
+        {
+          "name": "My Earnings",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/my-earnings",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{techToken}}" }] }
+          }
+        },
+        {
+          "name": "Earnings Summary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/my-earnings/summary",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{techToken}}" }] }
+          }
+        }
+      ]
+    }
+  ]
+}

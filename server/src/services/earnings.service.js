@@ -1,0 +1,95 @@
+const earningsRepo = require('../repositories/earnings.repository');
+const bookingRepo = require('../repositories/booking.repository');
+const paymentRepo = require('../repositories/payment.repository');
+const settingsRepo = require('../repositories/settings.repository');
+const config = require('../config/env');
+const AppError = require('../utils/apiError');
+const { pool } = require('../config/database');
+
+/**
+ * Calculate commission and record technician earnings
+ * @param {number} bookingId
+ * @param {number} paymentId
+ */
+async function calculateAndRecord(bookingId, paymentId) {
+  const alreadyExists = await earningsRepo.checkExists(bookingId);
+  if (alreadyExists) {
+    return await earningsRepo.findByBookingId(bookingId);
+  }
+
+  const booking = await bookingRepo.findById(bookingId);
+  if (!booking) {
+    throw AppError.notFound('Booking not found');
+  }
+
+  if (!booking.technician_id) {
+    throw AppError.badRequest('No technician assigned to this booking');
+  }
+
+  const payment = await paymentRepo.findById(paymentId);
+  if (!payment) {
+    throw AppError.notFound('Payment record not found');
+  }
+
+  const commissionRate = (await settingsRepo.get('platform_commission_percent')) || config.platform.commissionPercent;
+  const grossAmount = parseFloat(payment.amount);
+  const commissionAmount = parseFloat(((grossAmount * commissionRate) / 100).toFixed(2));
+  const netAmount = parseFloat((grossAmount - commissionAmount).toFixed(2));
+
+  const conn = await pool.getConnection();
+  let earningsId;
+  try {
+    await conn.beginTransaction();
+
+    earningsId = await earningsRepo.create({
+      technician_id: booking.technician_id,
+      booking_id: bookingId,
+      payment_id: paymentId,
+      gross_amount: grossAmount.toFixed(2),
+      commission_rate: commissionRate.toFixed(2),
+      commission_amount: commissionAmount.toFixed(2),
+      net_amount: netAmount.toFixed(2),
+      settlement_status: 'PENDING',
+      notes: `Earnings for booking #${booking.booking_number}`
+    }, conn);
+
+    await conn.query(
+      `UPDATE technician_profiles 
+       SET total_earnings = total_earnings + ? 
+       WHERE user_id = ?`,
+      [netAmount.toFixed(2), booking.technician_id]
+    );
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+
+  return await earningsRepo.findByBookingId(bookingId);
+}
+
+/**
+ * Get earnings history for a technician
+ * @param {number} technicianId (users.id)
+ * @param {Object} options
+ */
+async function getByTechnician(technicianId, options = {}) {
+  return await earningsRepo.findByTechnicianId(technicianId, options);
+}
+
+/**
+ * Get earnings summary statistics for a technician
+ * @param {number} technicianId (users.id)
+ */
+async function getSummary(technicianId) {
+  return await earningsRepo.getTotal(technicianId);
+}
+
+module.exports = {
+  calculateAndRecord,
+  getByTechnician,
+  getSummary
+};
