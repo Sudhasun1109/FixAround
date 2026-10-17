@@ -156,7 +156,7 @@ Update own profile.
 ### PATCH /technicians/availability (Technician)
 Toggle availability. Body: `{ "isAvailable": true, "isOnline": true }`
 
-### PATCH /technicians/:id/verify (Admin)
+### POST / PATCH /technicians/:id/verify (Admin)
 Verify or reject technician. Body: `{ "status": "approved", "notes": "..." }`
 
 ---

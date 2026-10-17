@@ -22,11 +22,29 @@ router.patch(
   validate(updateProfileValidation),
   technicianController.updateProfile
 );
+router.put(
+  '/profile',
+  verifyToken,
+  authorize(ROLES.TECHNICIAN),
+  validate(updateProfileValidation),
+  technicianController.updateProfile
+);
+
 router.patch('/availability', verifyToken, authorize(ROLES.TECHNICIAN), technicianController.setAvailability);
+router.post('/availability', verifyToken, authorize(ROLES.TECHNICIAN), technicianController.setAvailability);
+
 router.put('/skills', verifyToken, authorize(ROLES.TECHNICIAN), technicianController.updateSkills);
 
 router.get('/:id/reviews', technicianController.getTechnicianReviews);
+
 router.patch(
+  '/:id/verify',
+  verifyToken,
+  authorize(ROLES.ADMIN),
+  validate(verifyTechnicianValidation),
+  technicianController.verify
+);
+router.post(
   '/:id/verify',
   verifyToken,
   authorize(ROLES.ADMIN),
