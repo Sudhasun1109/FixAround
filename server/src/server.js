@@ -5,8 +5,7 @@ const config = require('./config/env');
 const { testConnection, pool } = require('./config/database');
 const { startAssignmentExpiryJob } = require('./jobs/assignmentExpiry.job');
 
-// Render reverse proxy configuration
-app.set('trust proxy', 1);
+
 
 const server = http.createServer(app);
 
