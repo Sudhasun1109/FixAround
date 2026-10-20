@@ -173,7 +173,11 @@ export const AuthProvider = ({ children }) => {
       console.error('Unexpected login response:', response);
       throw new Error(
         'Login response is missing user details or token. Check the backend response.'
+        
       );
+      console.log(
+  'LOGIN RESPONSE:',
+  JSON.stringify(response, null, 2));
     }
 
     saveAuth(userData, tokenValue);
