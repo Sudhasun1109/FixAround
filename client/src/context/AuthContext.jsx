@@ -9,75 +9,89 @@ import React, {
 
 import { authApi } from '../services/api';
 
-
 const AuthContext = createContext(null);
 
 const TOKEN_KEY = 'fixaround_token';
 const USER_KEY = 'fixaround_user';
 
 /**
- * Supports API responses such as:
- * { user: {...}, token: "..." }
- * { data: { user: {...}, token: "..." } }
- * { data: { data: { user: {...}, token: "..." } } }
+ * Normalize authentication response.
+ *
+ * Backend format:
+ * {
+ *   success: true,
+ *   message: "Login successful",
+ *   data: {
+ *     user: {...},
+ *     token: "..."
+ *   }
+ * }
  */
 const normalizeAuthResponse = (response) => {
-  let payload = response;
+  const candidates = [
+    response?.data,
+    response?.data?.data,
+    response?.result,
+    response?.data?.result,
+    response,
+  ].filter(Boolean);
 
-  for (let i = 0; i < 4; i++) {
-    if (!payload || typeof payload !== 'object') break;
+  for (const item of candidates) {
+    const userData =
+      item?.user ||
+      item?.profile ||
+      item?.customer ||
+      null;
 
-    const user = payload.user;
-    const token =
-      payload.token ||
-      payload.accessToken ||
-      payload.access_token;
+    const tokenValue =
+      item?.token ||
+      item?.accessToken ||
+      item?.access_token ||
+      null;
 
-    if (user && typeof user === 'object' && token) {
-      return { user, token };
-    }
-
-    if (payload.data && typeof payload.data === 'object') {
-      payload = payload.data;
-    } else {
-      break;
+    if (
+      userData &&
+      typeof userData === 'object' &&
+      typeof tokenValue === 'string' &&
+      tokenValue.length > 0
+    ) {
+      return {
+        user: userData,
+        token: tokenValue,
+      };
     }
   }
 
-  return { user: null, token: null };
+  return {
+    user: null,
+    token: null,
+  };
 };
 
 /**
- * Supports profile responses such as:
- * { user: {...} }
- * { data: { user: {...} } }
- * { data: {...user fields} }
+ * Normalize user profile response.
  */
 const normalizeUserResponse = (response) => {
-  let payload = response;
+  const candidates = [
+    response?.data,
+    response?.data?.data,
+    response?.user,
+    response,
+  ].filter(Boolean);
 
-  for (let i = 0; i < 4; i++) {
-    if (!payload || typeof payload !== 'object') return null;
-
-    if (
-      payload.user &&
-      typeof payload.user === 'object'
-    ) {
-      return payload.user;
+  for (const item of candidates) {
+    if (item?.user && typeof item.user === 'object') {
+      return item.user;
     }
 
     if (
-      payload.id != null ||
-      payload.user_id != null ||
-      payload.email
+      item &&
+      typeof item === 'object' &&
+      (item.id != null ||
+        item.user_id != null ||
+        item.email)
     ) {
-      return payload;
-    }
-
-    if (payload.data && typeof payload.data === 'object') {
-      payload = payload.data;
-    } else {
-      break;
+      return item;
     }
   }
 
@@ -90,25 +104,31 @@ export const AuthProvider = ({ children }) => {
       const savedUser = localStorage.getItem(USER_KEY);
       return savedUser ? JSON.parse(savedUser) : null;
     } catch (error) {
-      console.error('Could not read saved user:', error);
+      console.error('Failed to restore saved user:', error);
       localStorage.removeItem(USER_KEY);
       return null;
     }
   });
 
-  const [token, setToken] = useState(
-    () => localStorage.getItem(TOKEN_KEY)
+  const [token, setToken] = useState(() =>
+    localStorage.getItem(TOKEN_KEY)
   );
 
   const [loading, setLoading] = useState(true);
 
+  /**
+   * Save user and token after successful authentication.
+   */
   const saveAuth = useCallback((userData, tokenValue) => {
     if (!userData || typeof userData !== 'object') {
-      throw new Error('Valid user details were not returned by the server.');
+      throw new Error('Invalid user details received from server.');
     }
 
-    if (!tokenValue || typeof tokenValue !== 'string') {
-      throw new Error('Authentication token was not returned by the server.');
+    if (
+      typeof tokenValue !== 'string' ||
+      tokenValue.length === 0
+    ) {
+      throw new Error('Invalid authentication token received from server.');
     }
 
     localStorage.setItem(TOKEN_KEY, tokenValue);
@@ -118,7 +138,9 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
   }, []);
 
-  // Restore and verify an existing session.
+  /**
+   * Verify an existing session when the app loads.
+   */
   useEffect(() => {
     let cancelled = false;
 
@@ -126,7 +148,9 @@ export const AuthProvider = ({ children }) => {
       const savedToken = localStorage.getItem(TOKEN_KEY);
 
       if (!savedToken) {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
         return;
       }
 
@@ -135,11 +159,15 @@ export const AuthProvider = ({ children }) => {
         const currentUser = normalizeUserResponse(response);
 
         if (!currentUser) {
-          throw new Error('Could not retrieve valid user details.');
+          throw new Error('Unable to retrieve the authenticated user.');
         }
 
         if (!cancelled) {
-          localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+          localStorage.setItem(
+            USER_KEY,
+            JSON.stringify(currentUser)
+          );
+
           setUser(currentUser);
           setToken(savedToken);
         }
@@ -149,11 +177,14 @@ export const AuthProvider = ({ children }) => {
         if (!cancelled) {
           localStorage.removeItem(TOKEN_KEY);
           localStorage.removeItem(USER_KEY);
+
           setToken(null);
           setUser(null);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
@@ -164,63 +195,126 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const login = useCallback(async (credentials) => {
-    const response = await authApi.login(credentials);
-    const { user: userData, token: tokenValue } =
-      normalizeAuthResponse(response);
+  /**
+   * Email and password login.
+   */
+  const login = useCallback(
+    async (credentials) => {
+      const response = await authApi.login(credentials);
 
-    if (!userData || !tokenValue) {
-      console.error('Unexpected login response:', response);
-      throw new Error(
-        'Login response is missing user details or token. Check the backend response.'
-        
-      );
-      console.log(
-  'LOGIN RESPONSE:',
-  JSON.stringify(response, null, 2));
-    }
+      // Log response structure for debugging.
+      // Do not log or share the actual token.
+      console.log('FixAround login response:', {
+        success: response?.success,
+        message: response?.message,
+        dataExists: Boolean(response?.data),
+        userExists: Boolean(
+          response?.data?.user ||
+          response?.user
+        ),
+        tokenExists: Boolean(
+          response?.data?.token ||
+          response?.data?.accessToken ||
+          response?.token
+        ),
+      });
 
-    saveAuth(userData, tokenValue);
+      const { user: userData, token: tokenValue } =
+        normalizeAuthResponse(response);
 
-    return { user: userData, token: tokenValue };
-  }, [saveAuth]);
+      if (!userData || !tokenValue) {
+        console.error(
+          'Unexpected login response structure:',
+          response
+        );
 
-  const register = useCallback(async (userData) => {
-    const response = await authApi.register(userData);
-    const auth = normalizeAuthResponse(response);
+        throw new Error(
+          'Login response is missing user details or token. Check the backend response.'
+        );
+      }
 
-    if (!auth.user || !auth.token) {
-      console.error('Unexpected registration response:', response);
-      throw new Error(
-        'Registration response is missing user details or token.'
-      );
-    }
+      saveAuth(userData, tokenValue);
 
-    saveAuth(auth.user, auth.token);
+      return {
+        user: userData,
+        token: tokenValue,
+      };
+    },
+    [saveAuth]
+  );
 
-    return { user: auth.user, token: auth.token };
-  }, [saveAuth]);
+  /**
+   * Register a new user.
+   */
+  const register = useCallback(
+    async (userData) => {
+      const response = await authApi.register(userData);
 
-  const googleLogin = useCallback(async (credential, role = 'CUSTOMER') => {
-    const response = await authApi.googleLogin({
-      credential,
-      role,
-    });
+      const {
+        user: createdUser,
+        token: tokenValue,
+      } = normalizeAuthResponse(response);
 
-    const auth = normalizeAuthResponse(response);
+      if (!createdUser || !tokenValue) {
+        console.error(
+          'Unexpected registration response structure:',
+          response
+        );
 
-    if (!auth.user || !auth.token) {
-      console.error('Unexpected Google login response:', response);
-      throw new Error(
-        'Google login response is missing user details or token.'
-      );
-    }
+        throw new Error(
+          'Registration response is missing user details or token.'
+        );
+      }
 
-    saveAuth(auth.user, auth.token);
+      saveAuth(createdUser, tokenValue);
 
-    return { user: auth.user, token: auth.token };
-  }, [saveAuth]);
+      return {
+        user: createdUser,
+        token: tokenValue,
+      };
+    },
+    [saveAuth]
+  );
 
+  /**
+   * Google login.
+   */
+  const googleLogin = useCallback(
+    async (credential, role = 'customer') => {
+      const response = await authApi.googleLogin({
+        credential,
+        role,
+      });
+
+      const {
+        user: googleUser,
+        token: tokenValue,
+      } = normalizeAuthResponse(response);
+
+      if (!googleUser || !tokenValue) {
+        console.error(
+          'Unexpected Google login response structure:',
+          response
+        );
+
+        throw new Error(
+          'Google login response is missing user details or token.'
+        );
+      }
+
+      saveAuth(googleUser, tokenValue);
+
+      return {
+        user: googleUser,
+        token: tokenValue,
+      };
+    },
+    [saveAuth]
+  );
+
+  /**
+   * Log out the current user.
+   */
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
@@ -229,22 +323,37 @@ export const AuthProvider = ({ children }) => {
     } finally {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
-      setUser(null);
+
       setToken(null);
+      setUser(null);
     }
   }, []);
 
-  const updateUser = useCallback((updatedUser) => {
-    if (!updatedUser || typeof updatedUser !== 'object') return;
+  /**
+   * Update user details in the local session.
+   */
+  const updateUser = useCallback(
+    (updatedData) => {
+      setUser((currentUser) => {
+        if (!currentUser) {
+          return currentUser;
+        }
 
-    setUser((currentUser) => {
-      const mergedUser = { ...(currentUser || {}), ...updatedUser };
+        const nextUser = {
+          ...currentUser,
+          ...updatedData,
+        };
 
-      localStorage.setItem(USER_KEY, JSON.stringify(mergedUser));
+        localStorage.setItem(
+          USER_KEY,
+          JSON.stringify(nextUser)
+        );
 
-      return mergedUser;
-    });
-  }, []);
+        return nextUser;
+      });
+    },
+    []
+  );
 
   const value = {
     user,
@@ -269,11 +378,15 @@ export const useAuth = () => {
   const context = useContext(AuthContext);
 
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error(
+      'useAuth must be used within an AuthProvider'
+    );
   }
 
   return context;
 };
+
+// Required if another file imports { AuthContext }.
 export { AuthContext };
 
 export default AuthContext;
