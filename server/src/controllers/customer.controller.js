@@ -78,10 +78,39 @@ async function setDefaultAddress(req, res, next) {
   }
 }
 
+async function getWallet(req, res, next) {
+  try {
+    const { pool } = require('../config/database');
+    const [profile] = await pool.query(
+      'SELECT wallet_balance FROM customer_profiles WHERE user_id = ?',
+      [req.user.id]
+    );
+
+    const [transactions] = await pool.query(
+      `SELECT wt.*, b.booking_number, wc.claim_number 
+       FROM wallet_transactions wt
+       LEFT JOIN bookings b ON b.id = wt.booking_id
+       LEFT JOIN warranty_claims wc ON wc.id = wt.claim_id
+       WHERE wt.customer_id = ?
+       ORDER BY wt.created_at DESC LIMIT 50`,
+      [req.user.id]
+    );
+
+    const balance = profile[0]?.wallet_balance || 0;
+    return apiResponse.success(res, {
+      wallet_balance: Number(balance),
+      transactions: transactions || []
+    }, 'Wallet details retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getAddresses,
   createAddress,
   updateAddress,
   deleteAddress,
-  setDefaultAddress
+  setDefaultAddress,
+  getWallet
 };

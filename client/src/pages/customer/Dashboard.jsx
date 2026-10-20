@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { bookingsApi } from '../../services/api';
+import { bookingsApi, customerApi } from '../../services/api';
 import StatsCard from '../../components/common/StatsCard';
 import BookingCard from '../../components/booking/BookingCard';
 import EmptyState from '../../components/common/EmptyState';
 import Spinner from '../../components/common/Spinner';
 import Button from '../../components/common/Button';
+import { formatCurrency, formatDateTime } from '../../utils/formatters';
 import {
   Calendar,
   CheckCircle2,
@@ -17,6 +18,9 @@ import {
   Search,
   ArrowRight,
   ShieldCheck,
+  Wallet,
+  ArrowUpRight,
+  Sparkles,
 } from 'lucide-react';
 
 export default function CustomerDashboard() {
@@ -24,23 +28,38 @@ export default function CustomerDashboard() {
   const navigate = useNavigate();
 
   const [bookings, setBookings] = useState([]);
+  const [wallet, setWallet] = useState({ wallet_balance: user?.wallet_balance || 0, transactions: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchBookings = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const res = await bookingsApi.getMyBookings({ limit: 10 });
-        const list = res?.data?.bookings || res?.data || [];
-        setBookings(Array.isArray(list) ? list : []);
+        const [bookRes, walletRes] = await Promise.allSettled([
+          bookingsApi.getMyBookings({ limit: 10 }),
+          customerApi.getWallet(),
+        ]);
+
+        if (bookRes.status === 'fulfilled') {
+          const list = bookRes.value?.data?.bookings || bookRes.value?.data || [];
+          setBookings(Array.isArray(list) ? list : []);
+        }
+
+        if (walletRes.status === 'fulfilled') {
+          const wData = walletRes.value?.data || {};
+          setWallet({
+            wallet_balance: Number(wData.wallet_balance || 0),
+            transactions: Array.isArray(wData.transactions) ? wData.transactions : [],
+          });
+        }
       } catch (err) {
-        console.error('Failed to load customer bookings:', err);
+        console.error('Failed to load customer dashboard data:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchBookings();
+    fetchData();
   }, []);
 
   const activeBookings = bookings.filter(
@@ -85,7 +104,29 @@ export default function CustomerDashboard() {
       </div>
 
       {/* Metrics / Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-5 rounded-3xl shadow-sm flex flex-col justify-between relative overflow-hidden">
+          <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none" />
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-100 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
+              FixAround Wallet
+            </span>
+            <div className="p-2 bg-white/20 rounded-xl">
+              <Wallet className="w-4 h-4 text-white" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <div className="text-3xl font-extrabold tracking-tight">
+              {formatCurrency(wallet.wallet_balance)}
+            </div>
+            <p className="text-[11px] text-emerald-100 mt-1 flex items-center gap-1">
+              <span>● Active Balance</span>
+              <span className="opacity-70">• Usable for bookings</span>
+            </p>
+          </div>
+        </div>
+
         <StatsCard
           label="Active Jobs"
           value={activeBookings.length}
@@ -110,6 +151,43 @@ export default function CustomerDashboard() {
           subtitle={pendingPayments.length > 0 ? 'Pending payment checkout' : 'All accounts settled'}
         />
       </div>
+
+      {/* Wallet Activity / Refund History */}
+      {wallet.transactions && wallet.transactions.length > 0 && (
+        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Wallet className="w-4 h-4 text-emerald-600" />
+              <h3 className="text-sm font-bold text-fixblue-900">Wallet Activity & Refunds</h3>
+            </div>
+            <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              Live Wallet
+            </span>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {wallet.transactions.slice(0, 3).map((tx) => (
+              <div key={tx.id} className="py-2.5 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-xl ${tx.type === 'CREDIT' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-800">{tx.description}</p>
+                    <p className="text-[11px] text-slate-400">{formatDateTime(tx.created_at)}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className={`font-bold text-sm ${tx.type === 'CREDIT' ? 'text-emerald-600' : 'text-slate-900'}`}>
+                    {tx.type === 'CREDIT' ? '+' : '-'}{formatCurrency(tx.amount)}
+                  </span>
+                  <p className="text-[10px] text-slate-400">Bal: {formatCurrency(tx.balance_after)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Active & Recent Bookings List */}
       <div className="space-y-4">

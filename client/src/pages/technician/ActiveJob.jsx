@@ -5,6 +5,7 @@ import BookingTimeline from '../../components/booking/BookingTimeline';
 import StatusBadge from '../../components/booking/StatusBadge';
 import Button from '../../components/common/Button';
 import Spinner from '../../components/common/Spinner';
+import InteractiveMap from '../../components/common/InteractiveMap';
 import { formatCurrency, formatDateTime } from '../../utils/formatters';
 import { showToast } from '../../components/common/Toast';
 import {
@@ -18,6 +19,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Save,
+  Wrench,
 } from 'lucide-react';
 
 export default function ActiveJob() {
@@ -54,7 +56,10 @@ export default function ActiveJob() {
       // Load estimate
       try {
         const eRes = await estimatesApi.getByBooking(id);
-        const eData = eRes?.data?.estimate || eRes?.data || eRes;
+        let eData = eRes?.data?.estimate || eRes?.data?.estimates || eRes?.data || eRes;
+        if (Array.isArray(eData)) {
+          eData = eData[0] || null;
+        }
         if (eData?.id) setEstimate(eData);
       } catch {
         setEstimate(null);
@@ -301,6 +306,15 @@ export default function ActiveJob() {
             <div className="flex items-start gap-2 pt-2 border-t border-slate-100">
               <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
               <p>{booking.customer_address}</p>
+            </div>
+
+            <div className="pt-2">
+              <InteractiveMap
+                latitude={booking.customer_latitude}
+                longitude={booking.customer_longitude}
+                markerTitle={booking.customer_name || 'Customer Location'}
+                height="160px"
+              />
             </div>
           </div>
         </div>

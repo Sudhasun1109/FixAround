@@ -33,7 +33,10 @@ export default function EstimateApproval() {
           estData = res?.data?.estimate || res?.data || res;
         } catch {
           const resBooking = await estimatesApi.getByBooking(id);
-          estData = resBooking?.data?.estimate || resBooking?.data || resBooking;
+          estData = resBooking?.data?.estimate || resBooking?.data?.estimates || resBooking?.data || resBooking;
+        }
+        if (Array.isArray(estData)) {
+          estData = estData[0] || null;
         }
         setEstimate(estData);
       } catch (err) {

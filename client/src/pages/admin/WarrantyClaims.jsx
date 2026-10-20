@@ -16,6 +16,8 @@ import {
   XCircle,
   FileText,
   AlertCircle,
+  Wallet,
+  CreditCard,
 } from 'lucide-react';
 
 export default function AdminWarrantyClaims() {
@@ -57,22 +59,45 @@ export default function AdminWarrantyClaims() {
     fetchClaims();
   }, [fetchClaims]);
 
+  const getDefaultNote = (type) => {
+    switch (type) {
+      case 'FULL_REFUND':
+        return 'Warranty claim approved. 100% full refund credited directly to the customer FixAround Wallet.';
+      case 'PARTIAL_REFUND':
+        return 'Warranty claim approved. 50% partial refund credited directly to the customer FixAround Wallet.';
+      case 'RE_SERVICE':
+        return 'Complimentary re-service dispatched to resolve reported issue at no additional charge.';
+      case 'REJECTED':
+        return 'Claim reviewed and rejected as issue falls outside valid warranty coverage scope.';
+      default:
+        return 'Administrative resolution applied to this warranty claim.';
+    }
+  };
+
+  const handleResolutionTypeChange = (type) => {
+    setResolutionType(type);
+    if (!resolutionNotes || resolutionNotes === getDefaultNote(resolutionType)) {
+      setResolutionNotes(getDefaultNote(type));
+    }
+  };
+
   const handleResolveSubmit = async (e) => {
     e.preventDefault();
-    if (!resolutionNotes.trim()) {
-      showToast.error('Please add resolution notes explaining the decision');
-      return;
-    }
+    const finalNotes = resolutionNotes.trim() || getDefaultNote(resolutionType);
 
     try {
       setResolving(true);
       await claimsApi.resolve(resolvingClaim.id, {
         resolution_type: resolutionType,
-        resolution_notes: resolutionNotes.trim(),
+        resolution_notes: finalNotes,
         status: resolutionType === 'REJECTED' ? 'REJECTED' : 'RESOLVED',
       });
 
-      showToast.success('Warranty claim resolved successfully.');
+      showToast.success(
+        resolutionType === 'FULL_REFUND' || resolutionType === 'PARTIAL_REFUND'
+          ? 'Warranty claim resolved & refund credited to customer wallet!'
+          : 'Warranty claim resolved successfully.'
+      );
       setResolvingClaim(null);
       setResolutionNotes('');
       fetchClaims();
@@ -168,10 +193,17 @@ export default function AdminWarrantyClaims() {
 
                 {claim.resolution_notes && (
                   <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 space-y-1">
-                    <span className="font-bold block">
-                      Admin Decision: {claim.resolution_type || 'Resolved'}
+                    <span className="font-bold flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      Admin Decision: {(claim.resolution_type || 'Resolved').replace('_', ' ')}
                     </span>
                     <p className="leading-relaxed">{claim.resolution_notes}</p>
+                    {(claim.resolution_type === 'FULL_REFUND' || claim.resolution_type === 'PARTIAL_REFUND') && (
+                      <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-white/80 px-2.5 py-1 rounded-md border border-emerald-300">
+                        <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Refund Credited to Customer FixAround Wallet</span>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -185,8 +217,8 @@ export default function AdminWarrantyClaims() {
                       icon={ShieldCheck}
                       onClick={() => {
                         setResolvingClaim(claim);
-                        setResolutionType('RE_SERVICE');
-                        setResolutionNotes('');
+                        setResolutionType('FULL_REFUND');
+                        setResolutionNotes(getDefaultNote('FULL_REFUND'));
                       }}
                     >
                       Resolve Claim
@@ -215,20 +247,33 @@ export default function AdminWarrantyClaims() {
             <Select
               label="Resolution Action"
               value={resolutionType}
-              onChange={(e) => setResolutionType(e.target.value)}
+              onChange={(e) => handleResolutionTypeChange(e.target.value)}
               options={[
+                { value: 'FULL_REFUND', label: 'Authorize Full Refund (Credit Customer Wallet)' },
+                { value: 'PARTIAL_REFUND', label: 'Authorize Partial Refund (Credit Customer Wallet)' },
                 { value: 'RE_SERVICE', label: 'Order Complimentary Re-Service (Free Inspection)' },
-                { value: 'FULL_REFUND', label: 'Authorize Full Refund to Customer' },
-                { value: 'PARTIAL_REFUND', label: 'Authorize Partial Refund (Materials only)' },
                 { value: 'REJECTED', label: 'Reject Claim (Mishandling / Beyond Warranty Scope)' },
                 { value: 'OTHER', label: 'Other Administrative Action' },
               ]}
             />
 
+            {(resolutionType === 'FULL_REFUND' || resolutionType === 'PARTIAL_REFUND') && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-emerald-800">
+                <Wallet className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-xs">Direct Customer Wallet Credit</p>
+                  <p className="text-[11px] text-emerald-700 mt-0.5">
+                    {resolutionType === 'FULL_REFUND'
+                      ? 'The full booking amount will be instantly credited to the customer\'s FixAround Wallet balance.'
+                      : 'A 50% partial refund will be instantly credited to the customer\'s FixAround Wallet balance.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <Textarea
               label="Resolution Notes & Instructions"
-              required
-              rows={4}
+              rows={3}
               placeholder="State the rationale for customer and technician records..."
               value={resolutionNotes}
               onChange={(e) => setResolutionNotes(e.target.value)}
@@ -249,7 +294,11 @@ export default function AdminWarrantyClaims() {
                 size="sm"
                 loading={resolving}
               >
-                Execute Resolution
+                {resolutionType === 'FULL_REFUND'
+                  ? 'Pay Full Refund to Customer Wallet'
+                  : resolutionType === 'PARTIAL_REFUND'
+                  ? 'Pay Partial Refund to Customer Wallet'
+                  : 'Execute Resolution'}
               </Button>
             </div>
           </form>

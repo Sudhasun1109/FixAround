@@ -32,7 +32,9 @@ api.interceptors.response.use(
         window.location.href = '/login?expired=1';
       }
     }
+    const firstValidationError = error.response?.data?.errors?.[0]?.message;
     const message =
+      firstValidationError ||
       error.response?.data?.message ||
       error.response?.data?.error ||
       error.message ||
@@ -115,6 +117,8 @@ export const estimatesApi = {
 // Payments API
 export const paymentsApi = {
   initiate: (data) => api.post('/payments/initiate', data),
+  createRazorpayOrder: (data) => api.post('/payments/razorpay/create-order', data),
+  verifyRazorpay: (data) => api.post('/payments/razorpay/verify', data),
   verify: (data) => api.post('/payments/verify', data),
   getByBooking: (bookingId) => api.get(`/payments/booking/${bookingId}`),
   getMyPayments: (params) => api.get('/payments/my-payments', { params }),
@@ -189,6 +193,11 @@ export const addressesApi = {
   update: (id, data) => api.put(`/customers/addresses/${id}`, data),
   delete: (id) => api.delete(`/customers/addresses/${id}`),
   setDefault: (id) => api.patch(`/customers/addresses/${id}/default`),
+};
+
+// Customer API (Wallet, etc.)
+export const customerApi = {
+  getWallet: () => api.get('/customers/wallet'),
 };
 
 export default api;

@@ -61,10 +61,32 @@ async function getMyPayments(req, res, next) {
   }
 }
 
+async function createRazorpayOrder(req, res, next) {
+  try {
+    const bookingId = parseInt(req.body.booking_id || req.params.id, 10);
+    const amount = req.body.amount;
+    const orderData = await paymentService.createRazorpayOrder(bookingId, req.user.id, amount);
+    return apiResponse.success(res, orderData, 'Razorpay order created successfully', 201);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function verifyRazorpay(req, res, next) {
+  try {
+    const result = await paymentService.verifyRazorpayPayment(req.body, req.user.id);
+    return apiResponse.success(res, result.payment, result.message);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   initiate,
   getByBooking,
   verify,
   webhook,
-  getMyPayments
+  getMyPayments,
+  createRazorpayOrder,
+  verifyRazorpay
 };

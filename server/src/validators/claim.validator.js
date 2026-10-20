@@ -1,17 +1,30 @@
-const { body, param } = require('express-validator');
+const { body, param, check } = require('express-validator');
 const { CLAIM_STATUSES } = require('../utils/constants');
 
 const createClaimValidation = [
-  param('id')
-    .isInt({ min: 1 })
-    .withMessage('Booking ID must be a positive integer'),
+  check('booking_id')
+    .custom((val, { req }) => {
+      const id = req.params?.id || req.body?.booking_id || req.body?.id;
+      if (!id || isNaN(parseInt(id, 10)) || parseInt(id, 10) < 1) {
+        throw new Error('Valid booking ID is required');
+      }
+      return true;
+    }),
 
-  body('issue_description')
-    .trim()
-    .notEmpty()
-    .withMessage('Issue description is required')
-    .isLength({ min: 10, max: 3000 })
-    .withMessage('Issue description must be between 10 and 3000 characters'),
+  check('issue_description')
+    .custom((val, { req }) => {
+      const desc = req.body?.issue_description || req.body?.description;
+      if (!desc || typeof desc !== 'string' || desc.trim().length === 0) {
+        throw new Error('Issue description is required');
+      }
+      if (desc.trim().length < 3) {
+        throw new Error('Issue description must be at least 3 characters');
+      }
+      if (desc.trim().length > 3000) {
+        throw new Error('Issue description must not exceed 3000 characters');
+      }
+      return true;
+    }),
 
   body('evidence_notes')
     .optional()
@@ -19,13 +32,17 @@ const createClaimValidation = [
 ];
 
 const resolveClaimValidation = [
-  param('id')
-    .isInt({ min: 1 })
-    .withMessage('Claim ID must be a positive integer'),
+  check('id')
+    .custom((val, { req }) => {
+      const id = req.params?.id || req.body?.id || req.body?.claim_id;
+      if (!id || isNaN(parseInt(id, 10)) || parseInt(id, 10) < 1) {
+        throw new Error('Valid claim ID is required');
+      }
+      return true;
+    }),
 
   body('status')
-    .notEmpty()
-    .withMessage('Status is required')
+    .optional()
     .isIn([CLAIM_STATUSES.APPROVED, CLAIM_STATUSES.REJECTED, CLAIM_STATUSES.RESOLVED])
     .withMessage(`Status must be one of: ${[CLAIM_STATUSES.APPROVED, CLAIM_STATUSES.REJECTED, CLAIM_STATUSES.RESOLVED].join(', ')}`),
 
@@ -35,9 +52,8 @@ const resolveClaimValidation = [
     .withMessage('Invalid resolution_type specified'),
 
   body('resolution_notes')
+    .optional()
     .trim()
-    .notEmpty()
-    .withMessage('Resolution notes are required')
 ];
 
 module.exports = {

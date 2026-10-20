@@ -13,6 +13,8 @@ router.get('/my-payments', verifyToken, authorize(ROLES.CUSTOMER), paymentContro
 
 // Direct payments API (used by client paymentsApi)
 router.post('/initiate', verifyToken, authorize(ROLES.CUSTOMER), paymentController.initiate);
+router.post('/razorpay/create-order', verifyToken, authorize(ROLES.CUSTOMER), paymentController.createRazorpayOrder);
+router.post('/razorpay/verify', verifyToken, authorize(ROLES.CUSTOMER), paymentController.verifyRazorpay);
 router.post('/sandbox-pay', verifyToken, authorize(ROLES.CUSTOMER), paymentController.verify);
 router.post('/verify', verifyToken, authorize(ROLES.CUSTOMER), paymentController.verify);
 router.get('/booking/:bookingId', verifyToken, paymentController.getByBooking);

@@ -6,7 +6,7 @@ import Button from '../../components/common/Button';
 import StatusBadge from '../../components/booking/StatusBadge';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { showToast } from '../../components/common/Toast';
-import { Printer, ArrowLeft, Download, ShieldCheck, Wrench } from 'lucide-react';
+import { Printer, ArrowLeft, Download, ShieldCheck, Wrench, CreditCard } from 'lucide-react';
 
 export default function InvoiceView() {
   const { id } = useParams();
@@ -63,11 +63,18 @@ export default function InvoiceView() {
         <p className="text-xs text-slate-500">
           The requested tax invoice could not be located or has not yet been finalized.
         </p>
-        <Link to="/customer/bookings">
-          <Button variant="outline" icon={ArrowLeft}>
-            Back to Bookings
-          </Button>
-        </Link>
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <Link to={`/customer/checkout/${id}`}>
+            <Button variant="secondary" size="sm" icon={CreditCard}>
+              Proceed to Payment
+            </Button>
+          </Link>
+          <Link to="/customer/bookings">
+            <Button variant="outline" size="sm" icon={ArrowLeft}>
+              Back to Bookings
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -109,6 +116,13 @@ export default function InvoiceView() {
         </Link>
 
         <div className="flex items-center gap-3">
+          {invoice.status !== 'PAID' && (
+            <Link to={`/customer/checkout/${invoice.booking_id || id}`}>
+              <Button variant="secondary" size="sm" icon={CreditCard}>
+                Pay Now ({formatCurrency(total)})
+              </Button>
+            </Link>
+          )}
           <Button variant="primary" size="sm" icon={Printer} onClick={handlePrint}>
             Print / Save as PDF
           </Button>
@@ -232,6 +246,25 @@ export default function InvoiceView() {
             </tfoot>
           </table>
         </div>
+
+        {/* Payment CTA if Unpaid */}
+        {invoice.status !== 'PAID' && (
+          <div className="no-print p-5 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-xs text-amber-800">
+              <span className="font-bold text-amber-900 block text-sm">
+                Payment Due for this Invoice: {formatCurrency(total)}
+              </span>
+              <p className="mt-0.5 text-amber-700">
+                Complete payment using UPI, Card, NetBanking, or instant Sandbox to activate warranty coverage.
+              </p>
+            </div>
+            <Link to={`/customer/checkout/${invoice.booking_id || id}`} className="shrink-0 w-full sm:w-auto">
+              <Button variant="secondary" size="md" icon={CreditCard} fullWidth>
+                Proceed to Payment ({formatCurrency(total)})
+              </Button>
+            </Link>
+          </div>
+        )}
 
         {/* Warranty Certificate Notice */}
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3">

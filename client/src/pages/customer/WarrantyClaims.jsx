@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { claimsApi, bookingsApi } from '../../services/api';
 import Modal from '../../components/common/Modal';
 import Button from '../../components/common/Button';
@@ -13,6 +14,9 @@ import { formatDate, formatDateTime } from '../../utils/formatters';
 import { ShieldCheck, Plus, AlertCircle, FileText, CheckCircle } from 'lucide-react';
 
 export default function WarrantyClaims() {
+  const [searchParams] = useSearchParams();
+  const preselectedBookingId = searchParams.get('bookingId');
+
   const [claims, setClaims] = useState([]);
   const [completedBookings, setCompletedBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +52,16 @@ export default function WarrantyClaims() {
   useEffect(() => {
     fetchClaimsAndBookings();
   }, [fetchClaimsAndBookings]);
+
+  useEffect(() => {
+    if (preselectedBookingId && completedBookings.length > 0) {
+      const match = completedBookings.find((b) => String(b.id) === String(preselectedBookingId));
+      if (match) {
+        setSelectedBookingId(String(match.id));
+        setShowNewClaimModal(true);
+      }
+    }
+  }, [preselectedBookingId, completedBookings]);
 
   const handleCreateClaim = async (e) => {
     e.preventDefault();

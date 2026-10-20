@@ -1,0 +1,63 @@
+{
+  "name": "FixAround",
+  "short_name": "FixAround",
+  "description": "FixAround – Smart Local Service & Emergency Repair Platform. Connect with verified local technicians for plumbing, electrical, AC repair, carpentry, and 24/7 emergencies.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#1e3a5f",
+  "background_color": "#ffffff",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["lifestyle", "utilities", "business"],
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Book a Service",
+      "short_name": "Book",
+      "description": "Schedule a home service appointment",
+      "url": "/customer/book",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Emergency Repair (30m)",
+      "short_name": "Emergency",
+      "description": "Request immediate emergency technician dispatch",
+      "url": "/customer/emergency",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Bookings",
+      "short_name": "Bookings",
+      "description": "View active repairs and service history",
+      "url": "/customer/bookings",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}

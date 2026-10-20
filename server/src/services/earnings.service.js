@@ -88,7 +88,9 @@ async function getSummary(technicianId) {
   const summary = await earningsRepo.getTotal(technicianId);
   return {
     ...summary,
-    total_earned: summary.total_net
+    total_earned: summary.total_net,
+    monthly_earnings: summary.total_net,
+    net_payout: summary.total_net
   };
 }
 

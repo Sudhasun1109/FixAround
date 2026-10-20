@@ -9,6 +9,7 @@ import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Button from '../../components/common/Button';
 import Spinner from '../../components/common/Spinner';
 import ReviewForm from '../../components/review/ReviewForm';
+import InteractiveMap from '../../components/common/InteractiveMap';
 import { formatCurrency, formatDateTime } from '../../utils/formatters';
 import { showToast } from '../../components/common/Toast';
 import {
@@ -32,6 +33,7 @@ export default function BookingDetail() {
   const [booking, setBooking] = useState(null);
   const [timeline, setTimeline] = useState([]);
   const [estimate, setEstimate] = useState(null);
+  const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Modals
@@ -67,14 +69,27 @@ export default function BookingDetail() {
       // Load estimate
       try {
         const estRes = await estimatesApi.getByBooking(id);
-        const estData = estRes?.data?.estimate || estRes?.data || estRes;
+        let estData = estRes?.data?.estimate || estRes?.data?.estimates || estRes?.data || estRes;
+        if (Array.isArray(estData)) {
+          estData = estData[0] || null;
+        }
         if (estData && (estData.id || estData.total_estimate)) {
           setEstimate(estData);
         } else {
           setEstimate(null);
         }
-      } catch {
+      } catch (err) {
+        console.error('Failed to load estimate:', err);
         setEstimate(null);
+      }
+
+      // Load invoice
+      try {
+        const invRes = await invoicesApi.getByBooking(id);
+        const invData = invRes?.data?.invoice || invRes?.data || invRes;
+        setInvoice(invData);
+      } catch {
+        setInvoice(null);
       }
     } catch (err) {
       console.error('Failed to load booking:', err);
@@ -168,7 +183,17 @@ export default function BookingDetail() {
   const isEmergency = Boolean(booking.is_emergency || booking.urgency === 'emergency');
   const canCancel = ['REQUESTED', 'ASSIGNED', 'ACCEPTED'].includes(booking.status);
   const isCompleted = booking.status === 'COMPLETED';
-  const isPaid = booking.payment_status === 'SUCCESS' || booking.payment_status === 'PAID';
+  const isPaid = (
+    booking.payment_status === 'SUCCESS' ||
+    booking.payment_status === 'PAID' ||
+    invoice?.status === 'PAID'
+  );
+  const canPay = !isPaid && (
+    isCompleted ||
+    booking.status === 'IN_PROGRESS' ||
+    estimate?.status === 'APPROVED' ||
+    Boolean(booking.final_total || booking.estimated_total || estimate?.total_estimate)
+  );
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 py-4">
@@ -188,14 +213,14 @@ export default function BookingDetail() {
               variant="outline"
               size="sm"
               icon={XCircle}
-              onClick={() => setShowCancelModal(true)}
+              onClick={() => setShowCancelModal(false)}
               className="text-rose-600 border-rose-200 hover:bg-rose-50"
             >
               Cancel Request
             </Button>
           )}
 
-          {isCompleted && !isPaid && (
+          {canPay && (
             <Link to={`/customer/checkout/${booking.id}`}>
               <Button variant="secondary" size="sm" icon={CreditCard}>
                 Pay Now
@@ -204,14 +229,26 @@ export default function BookingDetail() {
           )}
 
           {isCompleted && (
-            <Button
-              variant="outline"
-              size="sm"
-              icon={Star}
-              onClick={() => setShowReviewModal(true)}
-            >
-              Rate & Review
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Star}
+                onClick={() => setShowReviewModal(true)}
+              >
+                Rate & Review
+              </Button>
+              <Link to={`/customer/claims?bookingId=${booking.id}`}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={ShieldCheck}
+                  className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                >
+                  File Warranty Claim
+                </Button>
+              </Link>
+            </>
           )}
         </div>
       </div>
@@ -285,11 +322,17 @@ export default function BookingDetail() {
 
             <div className="flex items-start gap-2 pt-2 border-t border-slate-100">
               <MapPin className="w-4 h-4 text-fixteal-600 shrink-0 mt-0.5" />
-              <div>
+              <div className="w-full">
                 <span className="font-semibold text-slate-700 block">Service Location:</span>
-                <p className="text-slate-500 mt-0.5">
+                <p className="text-slate-500 mt-0.5 mb-2">
                   {booking.customer_address || 'Address provided at booking time'}
                 </p>
+                <InteractiveMap
+                  latitude={booking.customer_latitude}
+                  longitude={booking.customer_longitude}
+                  markerTitle="Service Address"
+                  height="160px"
+                />
               </div>
             </div>
 
@@ -311,69 +354,112 @@ export default function BookingDetail() {
             Assigned Specialist
           </h3>
 
-          {booking.technician_name ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-fixblue-900 text-lg">
-                  {booking.technician_name[0]}
-                </div>
-                <div>
-                  <h4 className="text-base font-bold text-slate-900">
-                    {booking.technician_name}
-                  </h4>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-fixteal-700 bg-fixteal-50 px-2 py-0.5 rounded-full mt-0.5">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    Verified FixAround Pro
-                  </span>
-                </div>
-              </div>
+          {(() => {
+            const techName =
+              booking.technician_name ||
+              (booking.technician_first_name
+                ? `${booking.technician_first_name} ${booking.technician_last_name || ''}`.trim()
+                : null);
 
-              {booking.technician_phone && (
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs flex items-center justify-between">
-                  <span className="text-slate-500">Contact Technician:</span>
-                  <a
-                    href={`tel:${booking.technician_phone}`}
-                    className="font-bold text-fixblue-900 hover:underline"
-                  >
-                    {booking.technician_phone}
-                  </a>
+            if (techName) {
+              return (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-fixblue-900 text-lg">
+                      {techName[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="text-base font-bold text-slate-900">{techName}</h4>
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-fixteal-700 bg-fixteal-50 px-2 py-0.5 rounded-full mt-0.5">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        Verified FixAround Pro
+                      </span>
+                    </div>
+                  </div>
+
+                  {booking.technician_phone && (
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs flex items-center justify-between">
+                      <span className="text-slate-500">Contact Technician:</span>
+                      <a
+                        href={`tel:${booking.technician_phone}`}
+                        className="font-bold text-fixblue-900 hover:underline"
+                      >
+                        {booking.technician_phone}
+                      </a>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="py-6 text-center space-y-2">
-              <Clock className="w-8 h-8 text-amber-500 mx-auto animate-pulse" />
-              <h4 className="text-xs font-bold text-slate-800">
-                Finding qualified specialist...
-              </h4>
-              <p className="text-[11px] text-slate-400">
-                The smart dispatcher is matching nearby technicians. You will receive an alert once accepted.
-              </p>
-            </div>
-          )}
+              );
+            }
+
+            return (
+              <div className="py-6 text-center space-y-2">
+                <Clock className="w-8 h-8 text-amber-500 mx-auto animate-pulse" />
+                <h4 className="text-xs font-bold text-slate-800">
+                  Finding qualified specialist...
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  The smart dispatcher is matching nearby technicians. You will receive an alert once accepted.
+                </p>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
-      {/* Invoice Link if Completed */}
-      {isCompleted && (
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-indigo-50 text-fixblue-800">
-              <Receipt className="w-6 h-6" />
+      {/* Billing, Payment & Official Invoice Card */}
+      {(isPaid || canPay || isCompleted || estimate) && (
+        <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div
+              className={`p-3 rounded-2xl ${
+                isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-fixblue-800'
+              }`}
+            >
+              {isPaid ? <CreditCard className="w-6 h-6" /> : <Receipt className="w-6 h-6" />}
             </div>
             <div>
-              <h4 className="text-sm font-bold text-slate-900">Official Tax Invoice</h4>
-              <p className="text-xs text-slate-500">
-                View or print your itemized tax invoice and warranty certificate.
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-bold text-slate-900">
+                  {isPaid ? 'Payment Confirmed' : 'Payment & Tax Invoice'}
+                </h4>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                  }`}
+                >
+                  {isPaid ? 'PAID' : 'PAYMENT DUE'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {isPaid
+                  ? 'Your payment was received. Download or print your official tax invoice anytime.'
+                  : `Total Amount Due: ${formatCurrency(
+                      booking.final_total || booking.estimated_total || estimate?.total_estimate || 0
+                    )}`}
               </p>
             </div>
           </div>
 
-          <Link to={`/customer/invoices/${booking.id}`}>
-            <Button variant="outline" size="sm">
-              View Invoice
-            </Button>
-          </Link>
+          <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+            {canPay && (
+              <Link to={`/customer/checkout/${booking.id}`} className="w-full sm:w-auto">
+                <Button variant="secondary" size="sm" icon={CreditCard} fullWidth>
+                  Pay Now (
+                  {formatCurrency(
+                    booking.final_total || booking.estimated_total || estimate?.total_estimate || 0
+                  )}
+                  )
+                </Button>
+              </Link>
+            )}
+
+            <Link to={`/customer/invoices/${booking.id}`} className="w-full sm:w-auto">
+              <Button variant="outline" size="sm" icon={Receipt} fullWidth>
+                View Tax Invoice
+              </Button>
+            </Link>
+          </div>
         </div>
       )}
 

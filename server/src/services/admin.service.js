@@ -51,7 +51,38 @@ async function getDashboardStats() {
      FROM warranty_claims`
   );
 
+  const [recentBookings] = await pool.query(
+    `SELECT b.*, 
+            c.first_name AS customer_first_name, c.last_name AS customer_last_name,
+            t.first_name AS technician_first_name, t.last_name AS technician_last_name,
+            sc.name AS category_name
+     FROM bookings b
+     JOIN users c ON c.id = b.customer_id
+     LEFT JOIN users t ON t.id = b.technician_id
+     LEFT JOIN service_categories sc ON sc.id = b.category_id
+     ORDER BY b.created_at DESC
+     LIMIT 8`
+  );
+
   return {
+    total_users: userStats[0]?.total_users || 0,
+    total_customers: userStats[0]?.total_customers || 0,
+    total_technicians: userStats[0]?.total_technicians || 0,
+    active_users: userStats[0]?.active_users || 0,
+    total_bookings: bookingStats[0]?.total_bookings || 0,
+    completed_bookings: bookingStats[0]?.completed_bookings || 0,
+    active_bookings: bookingStats[0]?.active_bookings || 0,
+    cancelled_bookings: bookingStats[0]?.cancelled_bookings || 0,
+    emergency_count: bookingStats[0]?.emergency_bookings || 0,
+    total_revenue: Number(financialStats[0]?.total_revenue || 0),
+    today_revenue: Number(financialStats[0]?.today_revenue || 0),
+    active_technicians: techStats[0]?.available_technicians || 0,
+    online_technicians: techStats[0]?.online_technicians || 0,
+    verified_technicians: techStats[0]?.verified_technicians || 0,
+    pending_verifications: techStats[0]?.pending_verifications || 0,
+    total_claims: claimStats[0]?.total_claims || 0,
+    open_claims: claimStats[0]?.open_claims || 0,
+    recent_bookings: recentBookings || [],
     users: userStats[0],
     technicians: techStats[0],
     bookings: bookingStats[0],

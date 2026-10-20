@@ -16,6 +16,7 @@ import {
   Wallet,
   Settings,
   ShieldAlert,
+  Download,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -198,6 +199,18 @@ export default function Navbar() {
                           <User className="w-4 h-4 text-slate-400" />
                           Profile & Settings
                         </Link>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDropdownOpen(false);
+                            window.dispatchEvent(new CustomEvent('fixaround:open-pwa-install'));
+                          }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-fixteal-700 hover:bg-fixteal-50 text-left"
+                        >
+                          <Download className="w-4 h-4 text-fixteal-600" />
+                          Install FixAround App
+                        </button>
                       </div>
 
                       <div className="border-t border-slate-100 py-1">
@@ -269,6 +282,18 @@ export default function Navbar() {
           ))}
 
           <div className="pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                window.dispatchEvent(new CustomEvent('fixaround:open-pwa-install'));
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 mb-2 rounded-xl text-xs font-bold text-fixteal-800 bg-fixteal-50 hover:bg-fixteal-100 border border-fixteal-200 transition-colors"
+            >
+              <Download className="w-4 h-4 text-fixteal-600" />
+              <span>Install FixAround App</span>
+            </button>
+
             {isAuthenticated ? (
               <div className="space-y-2">
                 <Link

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a5f"/>
+      <stop offset="100%" stop-color="#0f1d30"/>
+    </linearGradient>
+    <linearGradient id="tealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="url(#tealGrad)" stroke-width="16" opacity="0.85"/>
+  <g transform="translate(256, 256) rotate(-45) translate(-256, -256)">
+    <!-- Wrench Handle -->
+    <rect x="236" y="160" width="40" height="200" rx="20" fill="#ffffff" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.3))"/>
+    <!-- Wrench Head -->
+    <path d="M 216 160 C 216 115, 296 115, 296 160 C 296 175, 280 185, 256 185 C 232 185, 216 175, 216 160 Z" fill="url(#tealGrad)"/>
+    <circle cx="256" cy="140" r="22" fill="#1e3a5f"/>
+    <!-- Bottom Ring -->
+    <circle cx="256" cy="355" r="32" fill="url(#tealGrad)"/>
+    <circle cx="256" cy="355" r="16" fill="#ffffff"/>
+  </g>
+</svg>

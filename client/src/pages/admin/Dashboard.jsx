@@ -33,24 +33,25 @@ export default function AdminDashboard() {
         const data = res?.data || res;
 
         setStats({
-          totalUsers: data.total_users || data.users_count || 128,
-          totalBookings: data.total_bookings || data.bookings_count || 482,
-          totalRevenue: data.total_revenue || data.revenue || 428500,
-          activeTechs: data.active_technicians || data.online_techs || 24,
-          emergencyCount: data.emergency_active || data.emergency_count || 3,
+          totalUsers: data.total_users ?? data.users?.total_users ?? 0,
+          totalBookings: data.total_bookings ?? data.bookings?.total_bookings ?? 0,
+          totalRevenue: data.total_revenue ?? data.financials?.total_revenue ?? 0,
+          activeTechs: data.active_technicians ?? data.technicians?.available_technicians ?? 0,
+          emergencyCount: data.emergency_count ?? data.bookings?.emergency_bookings ?? 0,
+          openClaims: data.open_claims ?? data.claims?.open_claims ?? 0,
         });
 
         const bList = data.recent_bookings || data.bookings || [];
         setRecentBookings(Array.isArray(bList) ? bList.slice(0, 6) : []);
       } catch (err) {
         console.error('Failed to load admin dashboard:', err);
-        // Fallback demo stats
         setStats({
-          totalUsers: 145,
-          totalBookings: 532,
-          totalRevenue: 512400,
-          activeTechs: 18,
-          emergencyCount: 2,
+          totalUsers: 0,
+          totalBookings: 0,
+          totalRevenue: 0,
+          activeTechs: 0,
+          emergencyCount: 0,
+          openClaims: 0,
         });
       } finally {
         setLoading(false);

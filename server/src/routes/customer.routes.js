@@ -14,4 +14,7 @@ router.put('/addresses/:id', customerController.updateAddress);
 router.patch('/addresses/:id/default', customerController.setDefaultAddress);
 router.delete('/addresses/:id', customerController.deleteAddress);
 
+// Customer Wallet
+router.get('/wallet', customerController.getWallet);
+
 module.exports = router;

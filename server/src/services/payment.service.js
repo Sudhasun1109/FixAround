@@ -13,8 +13,25 @@ const { pool } = require('../config/database');
 
 
 const Stripe = require('stripe');
+const Razorpay = require('razorpay');
 
 let stripeClient;
+let razorpayClient;
+
+function getRazorpayClient() {
+  if (!config.payment.razorpayKeyId || !config.payment.razorpayKeySecret) {
+    throw new Error('Razorpay credentials (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET) are not configured');
+  }
+
+  if (!razorpayClient) {
+    razorpayClient = new Razorpay({
+      key_id: config.payment.razorpayKeyId,
+      key_secret: config.payment.razorpayKeySecret,
+    });
+  }
+
+  return razorpayClient;
+}
 
 function getStripeClient() {
   if (!config.payment.stripeSecretKey) {
@@ -350,9 +367,11 @@ async function processPaymentSuccess(paymentId) {
       [booking.id, booking.status]
     );
 
-    // 2. Generate Invoice if not exists
-    const [existingInv] = await conn.query('SELECT id FROM invoices WHERE payment_id = ? LIMIT 1', [paymentId]);
-    if (existingInv.length === 0) {
+    // 2. Update existing Invoice or generate new if none exists
+    const [existingInv] = await conn.query('SELECT id FROM invoices WHERE booking_id = ? ORDER BY id DESC LIMIT 1', [booking.id]);
+    if (existingInv.length > 0) {
+      await conn.query('UPDATE invoices SET status = "PAID", payment_id = ? WHERE booking_id = ?', [paymentId, booking.id]);
+    } else {
       const invoiceNumber = generateInvoiceNumber();
       const lineItems = [
         {
@@ -432,6 +451,127 @@ async function processPaymentSuccess(paymentId) {
 }
 
 /**
+ * Create a Razorpay Order for a booking
+ * @param {number} bookingId
+ * @param {number} customerId
+ * @param {number} [customAmount=null]
+ */
+async function createRazorpayOrder(bookingId, customerId, customAmount = null) {
+  const rzp = getRazorpayClient();
+  const booking = await bookingRepo.findById(bookingId);
+
+  if (!booking) {
+    throw AppError.notFound('Booking not found');
+  }
+
+  if (Number(booking.customer_id) !== Number(customerId)) {
+    throw AppError.forbidden('You are not authorized to pay for this booking');
+  }
+
+  let amount = customAmount || booking.final_total || booking.estimated_total || 500;
+  amount = parseFloat(amount);
+  if (amount <= 0) {
+    throw AppError.badRequest('Payment amount must be greater than zero');
+  }
+
+  const amountInPaise = Math.round(amount * 100);
+  const paymentNumber = generatePaymentNumber();
+
+  // Create payment record in DB
+  const paymentId = await paymentRepo.create({
+    payment_number: paymentNumber,
+    booking_id: bookingId,
+    customer_id: customerId,
+    amount: amount.toFixed(2),
+    payment_method: 'RAZORPAY',
+    status: PAYMENT_STATUSES.INITIATED,
+    is_sandbox: 1
+  });
+
+  const receipt = `rcpt_${booking.id}_${paymentId}`.slice(0, 40);
+
+  const order = await rzp.orders.create({
+    amount: amountInPaise,
+    currency: 'INR',
+    receipt,
+    notes: {
+      booking_id: String(booking.id),
+      booking_number: booking.booking_number,
+      customer_id: String(customerId)
+    }
+  });
+
+  // Save gateway_order_id
+  await paymentRepo.updateStatus(paymentId, PAYMENT_STATUSES.INITIATED, {
+    gateway_order_id: order.id,
+    gateway_response: order
+  });
+
+  return {
+    orderId: order.id,
+    amount: order.amount, // in paise
+    currency: order.currency,
+    keyId: config.payment.razorpayKeyId,
+    paymentId,
+    paymentNumber,
+    bookingNumber: booking.booking_number,
+    customerName: booking.customer_name || `${booking.customer_first_name || ''} ${booking.customer_last_name || ''}`.trim() || 'Customer',
+    customerEmail: booking.customer_email || '',
+    customerPhone: booking.customer_phone || ''
+  };
+}
+
+/**
+ * Verify Razorpay payment signature
+ * @param {Object} data
+ * @param {number} customerId
+ */
+async function verifyRazorpayPayment(data, customerId) {
+  const { booking_id, payment_id, razorpay_order_id, razorpay_payment_id, razorpay_signature } = data;
+
+  const payment = await paymentRepo.findById(payment_id);
+  if (!payment) {
+    throw AppError.notFound('Payment record not found');
+  }
+
+  if (Number(payment.customer_id) !== Number(customerId)) {
+    throw AppError.forbidden('You are not authorized to verify this payment');
+  }
+
+  // Verify HMAC signature
+  const secret = config.payment.razorpayKeySecret;
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+    .digest('hex');
+
+  if (expectedSignature !== razorpay_signature) {
+    throw AppError.badRequest('Invalid payment signature verification failed');
+  }
+
+  // Update payment status to SUCCESS
+  await paymentRepo.updateStatus(payment.id, PAYMENT_STATUSES.SUCCESS, {
+    gateway_payment_id: razorpay_payment_id,
+    gateway_order_id: razorpay_order_id,
+    gateway_signature: razorpay_signature,
+    gateway_response: {
+      status: 'captured',
+      razorpay_payment_id,
+      razorpay_order_id
+    }
+  });
+
+  await processPaymentSuccess(payment.id);
+
+  const updatedPayment = await paymentRepo.findById(payment.id);
+
+  return {
+    payment: updatedPayment,
+    message: 'Razorpay payment verified successfully'
+  };
+}
+
+/**
  * Get payments for a booking
  * @param {number} bookingId
  */
@@ -450,6 +590,8 @@ async function getByCustomer(customerId, options = {}) {
 
 module.exports = {
   initiate,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
   verifySandboxPayment,
   handleWebhook,
   processPaymentSuccess,

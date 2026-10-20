@@ -18,13 +18,26 @@ import {
   Lock,
 } from 'lucide-react';
 
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      return resolve(true);
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 export default function PaymentCheckout() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [booking, setBooking] = useState(null);
   const [invoice, setInvoice] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('SANDBOX');
+  const [paymentMethod, setPaymentMethod] = useState('RAZORPAY');
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -66,17 +79,86 @@ export default function PaymentCheckout() {
     try {
       setProcessing(true);
 
-      // 1. Initiate Payment
-      const initRes = await paymentsApi.initiate({
-        booking_id: booking.id,
-        amount: totalAmount,
-        payment_method: paymentMethod,
-      });
+      // 1. Razorpay Gateway Flow (RAZORPAY, UPI, CARD)
+      if (paymentMethod === 'RAZORPAY' || paymentMethod === 'UPI' || paymentMethod === 'CARD') {
+        const isLoaded = await loadRazorpayScript();
+        if (!isLoaded) {
+          showToast.error('Razorpay SDK could not be loaded. Please check your internet connection.');
+          setProcessing(false);
+          return;
+        }
 
-      const paymentData = initRes?.data?.payment || initRes?.data || initRes;
+        const res = await paymentsApi.createRazorpayOrder({
+          booking_id: booking.id,
+          amount: totalAmount,
+        });
 
-      // 2. Simulate or Verify Payment
-      if (paymentMethod === 'SANDBOX' || paymentMethod === 'ONLINE' || paymentMethod === 'CARD' || paymentMethod === 'UPI') {
+        const orderData = res?.data || res;
+
+        const options = {
+          key: orderData.keyId,
+          amount: orderData.amount,
+          currency: orderData.currency || 'INR',
+          name: 'FixAround Services',
+          description: `Repair Service Payment - #${booking.booking_number || booking.id}`,
+          order_id: orderData.orderId,
+          handler: async function (response) {
+            try {
+              setProcessing(true);
+              const verifyRes = await paymentsApi.verifyRazorpay({
+                booking_id: booking.id,
+                payment_id: orderData.paymentId,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              });
+
+              setPaymentResult(verifyRes?.data || verifyRes);
+              setPaymentSuccess(true);
+              showToast.success('Razorpay payment verified successfully!');
+            } catch (err) {
+              console.error('Payment verification failed:', err);
+              showToast.error(err.message || 'Payment verification failed');
+            } finally {
+              setProcessing(false);
+            }
+          },
+          prefill: {
+            name: orderData.customerName || booking.customer_name || '',
+            email: orderData.customerEmail || booking.customer_email || '',
+            contact: orderData.customerPhone || booking.customer_phone || '',
+          },
+          theme: {
+            color: '#0d9488',
+          },
+          modal: {
+            ondismiss: function () {
+              setProcessing(false);
+              showToast.error('Payment window closed');
+            },
+          },
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (resp) {
+          console.error('Payment failed:', resp.error);
+          showToast.error(resp.error?.description || 'Payment failed');
+          setProcessing(false);
+        });
+        rzp.open();
+        return;
+      }
+
+      // 2. Instant Sandbox Test Mode
+      if (paymentMethod === 'SANDBOX') {
+        const initRes = await paymentsApi.initiate({
+          booking_id: booking.id,
+          amount: totalAmount,
+          payment_method: 'SANDBOX',
+        });
+
+        const paymentData = initRes?.data?.payment || initRes?.data || initRes;
+
         const verifyRes = await paymentsApi.simulateSandbox({
           booking_id: booking.id,
           payment_id: paymentData.id,
@@ -86,14 +168,21 @@ export default function PaymentCheckout() {
 
         setPaymentResult(verifyRes?.data || verifyRes);
         setPaymentSuccess(true);
-        showToast.success('Payment completed successfully!');
-      } else {
-        // Cash payment marked
-        setPaymentResult({ method: 'CASH', status: 'SUCCESS' });
-        setPaymentSuccess(true);
-        showToast.success('Cash payment recorded with technician.');
+        showToast.success('Instant test payment completed successfully!');
+        return;
       }
+
+      // 3. Cash on Delivery
+      await paymentsApi.initiate({
+        booking_id: booking.id,
+        amount: totalAmount,
+        payment_method: 'CASH',
+      });
+      setPaymentResult({ method: 'CASH', status: 'SUCCESS' });
+      setPaymentSuccess(true);
+      showToast.success('Cash payment recorded with technician.');
     } catch (err) {
+      console.error('Payment error:', err);
       showToast.error(err.message || 'Payment transaction failed');
     } finally {
       setProcessing(false);
@@ -181,6 +270,36 @@ export default function PaymentCheckout() {
           </h2>
 
           <div className="space-y-3">
+            {/* Razorpay Gateway Option */}
+            <label
+              className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${
+                paymentMethod === 'RAZORPAY'
+                  ? 'border-fixteal-500 bg-teal-50/50 ring-2 ring-fixteal-500'
+                  : 'border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  name="payment"
+                  checked={paymentMethod === 'RAZORPAY'}
+                  onChange={() => setPaymentMethod('RAZORPAY')}
+                  className="text-fixteal-600 focus:ring-fixteal-500"
+                />
+                <div>
+                  <span className="text-xs font-bold text-slate-900 block">
+                    Razorpay Gateway (UPI, Cards, NetBanking, Wallets)
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Pay securely using Google Pay, PhonePe, Paytm, BHIM, Cards or NetBanking
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                Official Gateway
+              </span>
+            </label>
+
             {/* Sandbox Option */}
             <label
               className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${
@@ -207,64 +326,8 @@ export default function PaymentCheckout() {
                 </div>
               </div>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-fixteal-100 text-fixteal-800">
-                Recommended for Demo
+                1-Click Demo
               </span>
-            </label>
-
-            {/* UPI */}
-            <label
-              className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${
-                paymentMethod === 'UPI'
-                  ? 'border-fixteal-500 bg-teal-50/50 ring-2 ring-fixteal-500'
-                  : 'border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  name="payment"
-                  checked={paymentMethod === 'UPI'}
-                  onChange={() => setPaymentMethod('UPI')}
-                  className="text-fixteal-600 focus:ring-fixteal-500"
-                />
-                <div>
-                  <span className="text-xs font-bold text-slate-900 block">
-                    UPI / QR Code (GPay, PhonePe, Paytm)
-                  </span>
-                  <span className="text-[11px] text-slate-500">
-                    Pay directly from your favorite UPI mobile app
-                  </span>
-                </div>
-              </div>
-              <QrCode className="w-5 h-5 text-slate-400" />
-            </label>
-
-            {/* Card */}
-            <label
-              className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${
-                paymentMethod === 'CARD'
-                  ? 'border-fixteal-500 bg-teal-50/50 ring-2 ring-fixteal-500'
-                  : 'border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  name="payment"
-                  checked={paymentMethod === 'CARD'}
-                  onChange={() => setPaymentMethod('CARD')}
-                  className="text-fixteal-600 focus:ring-fixteal-500"
-                />
-                <div>
-                  <span className="text-xs font-bold text-slate-900 block">
-                    Credit / Debit Card
-                  </span>
-                  <span className="text-[11px] text-slate-500">
-                    Visa, MasterCard, RuPay, Maestro
-                  </span>
-                </div>
-              </div>
-              <CreditCard className="w-5 h-5 text-slate-400" />
             </label>
 
             {/* Cash */}

@@ -6,6 +6,7 @@ import Select from '../../components/common/Select';
 import Textarea from '../../components/common/Textarea';
 import Button from '../../components/common/Button';
 import PriceRange from '../../components/service/PriceRange';
+import InteractiveMap from '../../components/common/InteractiveMap';
 import { showToast } from '../../components/common/Toast';
 import {
   Calendar,
@@ -313,6 +314,30 @@ export default function CreateBooking() {
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
               />
+
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span className="font-semibold flex items-center gap-1 text-slate-700">
+                    <MapPin className="w-3.5 h-3.5 text-fixteal-600" />
+                    Interactive Map Pin
+                  </span>
+                  <span>Click map to adjust pin</span>
+                </div>
+                <InteractiveMap
+                  latitude={latitude}
+                  longitude={longitude}
+                  markerTitle="Service Address"
+                  height="180px"
+                  onLocationSelect={({ latitude: lat, longitude: lng }) => {
+                    setLatitude(lat);
+                    setLongitude(lng);
+                    if (!address || address.startsWith('GPS Coords:')) {
+                      setAddress(`GPS Coords: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                    }
+                    showToast.success('Location pinpointed on map');
+                  }}
+                />
+              </div>
             </div>
 
             <div className="pt-4 border-t border-slate-100">

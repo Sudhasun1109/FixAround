@@ -3,8 +3,12 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import {GoogleOAuthProvider} from '@react-oauth/google'
 import { AuthProvider } from './context/AuthContext';
+import { registerServiceWorker } from './utils/pwaRegister';
 import App from './App';
 import './index.css';
+
+// Register PWA Service Worker
+registerServiceWorker();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

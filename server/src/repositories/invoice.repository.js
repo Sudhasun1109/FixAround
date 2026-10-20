@@ -90,7 +90,9 @@ async function findByBookingId(bookingId, conn = pool) {
      JOIN bookings b ON b.id = inv.booking_id
      JOIN users c ON c.id = inv.customer_id
      LEFT JOIN users t ON t.id = inv.technician_id
-     WHERE inv.booking_id = ? LIMIT 1`,
+     WHERE inv.booking_id = ?
+     ORDER BY (inv.status = 'PAID') DESC, inv.id DESC
+     LIMIT 1`,
     [bookingId]
   );
   return rows[0] || null;

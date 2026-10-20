@@ -60,19 +60,31 @@ async function create(data, conn = pool) {
 async function findById(id, conn = pool) {
   const [rows] = await conn.query(
     `SELECT b.*,
+            sc.name AS service_name,
             sc.name AS category_name, sc.slug AS category_slug, sc.icon AS category_icon, sc.warranty_period_days,
             c.first_name AS customer_first_name, c.last_name AS customer_last_name, 
+            CASE WHEN c.id IS NOT NULL THEN TRIM(CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, ''))) ELSE NULL END AS customer_name,
             c.email AS customer_email, c.phone AS customer_phone,
             t.first_name AS technician_first_name, t.last_name AS technician_last_name, 
+            CASE WHEN t.id IS NOT NULL THEN TRIM(CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, ''))) ELSE NULL END AS technician_name,
             t.email AS technician_email, t.phone AS technician_phone,
             tp.avg_rating AS technician_avg_rating,
-            addr.address_line1, addr.address_line2, addr.city, addr.state, addr.pincode
+            addr.address_line1, addr.address_line2, addr.city, addr.state, addr.pincode,
+            p.status AS payment_status,
+            p.id AS payment_id,
+            p.payment_method
      FROM bookings b
      JOIN service_categories sc ON sc.id = b.category_id
      JOIN users c ON c.id = b.customer_id
      LEFT JOIN users t ON t.id = b.technician_id
      LEFT JOIN technician_profiles tp ON tp.user_id = t.id
      LEFT JOIN addresses addr ON addr.id = b.address_id
+     LEFT JOIN (
+       SELECT booking_id, MAX(id) AS max_id 
+       FROM payments 
+       GROUP BY booking_id
+     ) latest_p ON latest_p.booking_id = b.id
+     LEFT JOIN payments p ON p.id = latest_p.max_id
      WHERE b.id = ? LIMIT 1`,
     [id]
   );
@@ -87,9 +99,12 @@ async function findById(id, conn = pool) {
 async function findByBookingNumber(bookingNumber, conn = pool) {
   const [rows] = await conn.query(
     `SELECT b.*,
+            sc.name AS service_name,
             sc.name AS category_name, sc.slug AS category_slug,
             c.first_name AS customer_first_name, c.last_name AS customer_last_name,
-            t.first_name AS technician_first_name, t.last_name AS technician_last_name
+            CASE WHEN c.id IS NOT NULL THEN TRIM(CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, ''))) ELSE NULL END AS customer_name,
+            t.first_name AS technician_first_name, t.last_name AS technician_last_name,
+            CASE WHEN t.id IS NOT NULL THEN TRIM(CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, ''))) ELSE NULL END AS technician_name
      FROM bookings b
      JOIN service_categories sc ON sc.id = b.category_id
      JOIN users c ON c.id = b.customer_id
@@ -124,11 +139,23 @@ async function findByCustomerId(customerId, { page = 1, limit = 10, status = nul
 
   const selectQuery = `
     SELECT b.*,
+           sc.name AS service_name,
            sc.name AS category_name, sc.slug AS category_slug, sc.icon AS category_icon,
-           t.first_name AS technician_first_name, t.last_name AS technician_last_name, t.phone AS technician_phone
+           t.first_name AS technician_first_name, t.last_name AS technician_last_name,
+           CASE WHEN t.id IS NOT NULL THEN TRIM(CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, ''))) ELSE NULL END AS technician_name,
+           t.phone AS technician_phone,
+           p.status AS payment_status,
+           p.id AS payment_id,
+           p.payment_method
     FROM bookings b
     JOIN service_categories sc ON sc.id = b.category_id
     LEFT JOIN users t ON t.id = b.technician_id
+    LEFT JOIN (
+      SELECT booking_id, MAX(id) AS max_id 
+      FROM payments 
+      GROUP BY booking_id
+    ) latest_p ON latest_p.booking_id = b.id
+    LEFT JOIN payments p ON p.id = latest_p.max_id
     ${whereClause}
     ORDER BY b.id DESC
     LIMIT ? OFFSET ?
@@ -162,8 +189,11 @@ async function findByTechnicianId(technicianId, { page = 1, limit = 10, status =
 
   const selectQuery = `
     SELECT b.*,
+           sc.name AS service_name,
            sc.name AS category_name, sc.slug AS category_slug, sc.icon AS category_icon,
-           c.first_name AS customer_first_name, c.last_name AS customer_last_name, c.phone AS customer_phone
+           c.first_name AS customer_first_name, c.last_name AS customer_last_name,
+           CASE WHEN c.id IS NOT NULL THEN TRIM(CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, ''))) ELSE NULL END AS customer_name,
+           c.phone AS customer_phone
     FROM bookings b
     JOIN service_categories sc ON sc.id = b.category_id
     JOIN users c ON c.id = b.customer_id

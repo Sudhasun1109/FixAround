@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FixAround — Offline Mode</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #f8fafc;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 24px;
+        text-align: center;
+      }
+      .card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 24px;
+        padding: 40px 28px;
+        max-width: 440px;
+        width: 100%;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+      }
+      .icon-box {
+        width: 72px;
+        height: 72px;
+        background: #f0fdfa;
+        border: 2px solid #ccfbf1;
+        border-radius: 20px;
+        margin: 0 auto 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #0d9488;
+      }
+      h1 {
+        font-size: 22px;
+        font-weight: 800;
+        color: #1e3a5f;
+        margin-bottom: 8px;
+      }
+      p {
+        font-size: 14px;
+        color: #64748b;
+        line-height: 1.6;
+        margin-bottom: 24px;
+      }
+      .badge {
+        display: inline-block;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        margin-bottom: 12px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #0d9488;
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 14px;
+        padding: 12px 24px;
+        border-radius: 14px;
+        border: none;
+        cursor: pointer;
+        width: 100%;
+        transition: background-color 0.15s ease;
+      }
+      .btn:hover {
+        background: #0f766e;
+      }
+      .footer-note {
+        font-size: 11px;
+        color: #94a3b8;
+        margin-top: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="icon-box">
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="1" y1="1" x2="23" y2="23"></line>
+          <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+          <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+          <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+          <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+          <line x1="12" y1="20" x2="12.01" y2="20"></line>
+        </svg>
+      </div>
+      <div class="badge">FixAround Offline</div>
+      <h1>Connection Lost</h1>
+      <p>
+        It looks like you're currently offline. Please check your Wi-Fi or mobile data connection and try again.
+      </p>
+      <button class="btn" onclick="window.location.reload()">
+        Try Reconnecting
+      </button>
+      <div class="footer-note">
+        FixAround — Smart Local Service & Emergency Repairs
+      </div>
+    </div>
+  </body>
+</html>
