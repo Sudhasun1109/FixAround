@@ -9,6 +9,7 @@ import React, {
 
 import { authApi } from '../services/api';
 
+
 const AuthContext = createContext(null);
 
 const TOKEN_KEY = 'fixaround_token';
@@ -269,5 +270,6 @@ export const useAuth = () => {
 
   return context;
 };
+export { AuthContext };
 
 export default AuthContext;
