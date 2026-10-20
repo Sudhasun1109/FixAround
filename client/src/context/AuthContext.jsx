@@ -1,129 +1,245 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
+
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
+
 import { authApi } from '../services/api';
 
-export const AuthContext = createContext(null);
+const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
+const TOKEN_KEY = 'fixaround_token';
+const USER_KEY = 'fixaround_user';
+
+/**
+ * Supports API responses such as:
+ * { user: {...}, token: "..." }
+ * { data: { user: {...}, token: "..." } }
+ * { data: { data: { user: {...}, token: "..." } } }
+ */
+const normalizeAuthResponse = (response) => {
+  let payload = response;
+
+  for (let i = 0; i < 4; i++) {
+    if (!payload || typeof payload !== 'object') break;
+
+    const user = payload.user;
+    const token =
+      payload.token ||
+      payload.accessToken ||
+      payload.access_token;
+
+    if (user && typeof user === 'object' && token) {
+      return { user, token };
+    }
+
+    if (payload.data && typeof payload.data === 'object') {
+      payload = payload.data;
+    } else {
+      break;
+    }
+  }
+
+  return { user: null, token: null };
+};
+
+/**
+ * Supports profile responses such as:
+ * { user: {...} }
+ * { data: { user: {...} } }
+ * { data: {...user fields} }
+ */
+const normalizeUserResponse = (response) => {
+  let payload = response;
+
+  for (let i = 0; i < 4; i++) {
+    if (!payload || typeof payload !== 'object') return null;
+
+    if (
+      payload.user &&
+      typeof payload.user === 'object'
+    ) {
+      return payload.user;
+    }
+
+    if (
+      payload.id != null ||
+      payload.user_id != null ||
+      payload.email
+    ) {
+      return payload;
+    }
+
+    if (payload.data && typeof payload.data === 'object') {
+      payload = payload.data;
+    } else {
+      break;
+    }
+  }
+
+  return null;
+};
+
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
-      const savedUser = localStorage.getItem('fixaround_user');
+      const savedUser = localStorage.getItem(USER_KEY);
       return savedUser ? JSON.parse(savedUser) : null;
-    } catch {
+    } catch (error) {
+      console.error('Could not read saved user:', error);
+      localStorage.removeItem(USER_KEY);
       return null;
     }
   });
-  const [token, setToken] = useState(() => localStorage.getItem('fixaround_token'));
+
+  const [token, setToken] = useState(
+    () => localStorage.getItem(TOKEN_KEY)
+  );
+
   const [loading, setLoading] = useState(true);
 
-  // Initialize and verify user on mount
+  const saveAuth = useCallback((userData, tokenValue) => {
+    if (!userData || typeof userData !== 'object') {
+      throw new Error('Valid user details were not returned by the server.');
+    }
+
+    if (!tokenValue || typeof tokenValue !== 'string') {
+      throw new Error('Authentication token was not returned by the server.');
+    }
+
+    localStorage.setItem(TOKEN_KEY, tokenValue);
+    localStorage.setItem(USER_KEY, JSON.stringify(userData));
+
+    setToken(tokenValue);
+    setUser(userData);
+  }, []);
+
+  // Restore and verify an existing session.
   useEffect(() => {
-    const initAuth = async () => {
-      const storedToken = localStorage.getItem('fixaround_token');
-      if (!storedToken) {
-        setUser(null);
-        setLoading(false);
+    let cancelled = false;
+
+    const initializeAuth = async () => {
+      const savedToken = localStorage.getItem(TOKEN_KEY);
+
+      if (!savedToken) {
+        if (!cancelled) setLoading(false);
         return;
       }
 
       try {
         const response = await authApi.getMe();
-        if (response && response.data) {
-          setUser(response.data);
-          localStorage.setItem('fixaround_user', JSON.stringify(response.data));
-        } else if (response && response.user) {
-          setUser(response.user);
-          localStorage.setItem('fixaround_user', JSON.stringify(response.user));
+        const currentUser = normalizeUserResponse(response);
+
+        if (!currentUser) {
+          throw new Error('Could not retrieve valid user details.');
         }
-      } catch (err) {
-        console.error('Failed to restore auth session:', err);
-        localStorage.removeItem('fixaround_token');
-        localStorage.removeItem('fixaround_user');
-        setUser(null);
-        setToken(null);
+
+        if (!cancelled) {
+          localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+          setUser(currentUser);
+          setToken(savedToken);
+        }
+      } catch (error) {
+        console.error('Session verification failed:', error);
+
+        if (!cancelled) {
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(USER_KEY);
+          setToken(null);
+          setUser(null);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
-    initAuth();
+    initializeAuth();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const login = async (credentials) => {
-    const res = await authApi.login(credentials);
-    const tokenVal = res.data?.token || res.token;
-    const userData = res.data?.user || res.data || res.user;
+  const login = useCallback(async (credentials) => {
+    const response = await authApi.login(credentials);
+    const { user: userData, token: tokenValue } =
+      normalizeAuthResponse(response);
 
-    if (tokenVal) {
-      localStorage.setItem('fixaround_token', tokenVal);
-      setToken(tokenVal);
+    if (!userData || !tokenValue) {
+      console.error('Unexpected login response:', response);
+      throw new Error(
+        'Login response is missing user details or token. Check the backend response.'
+      );
     }
-    if (userData) {
-      localStorage.setItem('fixaround_user', JSON.stringify(userData));
-      setUser(userData);
-    }
-    return { user: userData, token: tokenVal };
-  };
 
-  const register = async (registrationData) => {
-    const res = await authApi.register(registrationData);
-    const tokenVal = res.data?.token || res.token;
-    const userData = res.data?.user || res.data || res.user;
+    saveAuth(userData, tokenValue);
 
-    if (tokenVal) {
-      localStorage.setItem('fixaround_token', tokenVal);
-      setToken(tokenVal);
-    }
-    if (userData) {
-      localStorage.setItem('fixaround_user', JSON.stringify(userData));
-      setUser(userData);
-    }
-    return { user: userData, token: tokenVal };
-  };
+    return { user: userData, token: tokenValue };
+  }, [saveAuth]);
 
-  const googleLogin = async (credential, role = 'customer') => {
-    const res = await authApi.googleLogin({ credential, role });
-    const tokenVal = res.data?.token || res.token;
-    const userData = res.data?.user || res.data || res.user;
+  const register = useCallback(async (userData) => {
+    const response = await authApi.register(userData);
+    const auth = normalizeAuthResponse(response);
 
-    if (tokenVal) {
-      localStorage.setItem('fixaround_token', tokenVal);
-      setToken(tokenVal);
+    if (!auth.user || !auth.token) {
+      console.error('Unexpected registration response:', response);
+      throw new Error(
+        'Registration response is missing user details or token.'
+      );
     }
-    if (userData) {
-      localStorage.setItem('fixaround_user', JSON.stringify(userData));
-      setUser(userData);
+
+    saveAuth(auth.user, auth.token);
+
+    return { user: auth.user, token: auth.token };
+  }, [saveAuth]);
+
+  const googleLogin = useCallback(async (credential, role = 'CUSTOMER') => {
+    const response = await authApi.googleLogin({
+      credential,
+      role,
+    });
+
+    const auth = normalizeAuthResponse(response);
+
+    if (!auth.user || !auth.token) {
+      console.error('Unexpected Google login response:', response);
+      throw new Error(
+        'Google login response is missing user details or token.'
+      );
     }
-    return { user: userData, token: tokenVal };
-  };
+
+    saveAuth(auth.user, auth.token);
+
+    return { user: auth.user, token: auth.token };
+  }, [saveAuth]);
 
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
-    } catch {
-      // Ignore backend logout failure
+    } catch (error) {
+      console.error('Logout request failed:', error);
     } finally {
-      localStorage.removeItem('fixaround_token');
-      localStorage.removeItem('fixaround_user');
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
       setUser(null);
       setToken(null);
     }
   }, []);
 
-  const updateUser = (updatedFields) => {
-    setUser((prev) => {
-      const merged = { ...prev, ...updatedFields };
-      localStorage.setItem('fixaround_user', JSON.stringify(merged));
-      return merged;
-    });
-  };
+  const updateUser = useCallback((updatedUser) => {
+    if (!updatedUser || typeof updatedUser !== 'object') return;
 
-  const hasRole = (role) => {
-    if (!user) return false;
-    if (Array.isArray(role)) {
-      return role.includes(user.role);
-    }
-    return user.role === role;
-  };
+    setUser((currentUser) => {
+      const mergedUser = { ...(currentUser || {}), ...updatedUser };
+
+      localStorage.setItem(USER_KEY, JSON.stringify(mergedUser));
+
+      return mergedUser;
+    });
+  }, []);
 
   const value = {
     user,
@@ -131,12 +247,27 @@ export function AuthProvider({ children }) {
     loading,
     isAuthenticated: Boolean(user && token),
     login,
-    googleLogin,
     register,
+    googleLogin,
     logout,
     updateUser,
-    hasRole,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+
+  return context;
+};
+
+export default AuthContext;
