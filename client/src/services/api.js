@@ -66,6 +66,7 @@ export const authApi = {
 // Services Categories API
 export const servicesApi = {
   getAll: (params) => api.get('/services', { params }),
+  getStates: () => api.get('/services/states'),
   getById: (id) => api.get(`/services/${id}`),
   getBySlug: (slug) => api.get(`/services/slug/${slug}`),
   create: (data) => api.post('/services', data),
@@ -96,7 +97,7 @@ export const bookingsApi = {
   getAll: (params) => api.get('/bookings', { params }),
   getById: (id) => api.get(`/bookings/${id}`),
   cancel: (id, reason) => api.post(`/bookings/${id}/cancel`, { reason }),
-  updateStatus: (id, status, notes = '') => api.patch(`/bookings/${id}/status`, { status, notes }),
+  updateStatus: (id, status, notes = '', extra = {}) => api.patch(`/bookings/${id}/status`, { status, notes, ...extra }),
   accept: (id) => api.post(`/bookings/${id}/accept`),
   reject: (id, reason) => api.post(`/bookings/${id}/reject`, { reason }),
   getTimeline: (id) => api.get(`/bookings/${id}/timeline`),
@@ -117,6 +118,7 @@ export const estimatesApi = {
 // Payments API
 export const paymentsApi = {
   initiate: (data) => api.post('/payments/initiate', data),
+  payWithWallet: (data) => api.post('/payments/wallet-pay', data),
   createRazorpayOrder: (data) => api.post('/payments/razorpay/create-order', data),
   verifyRazorpay: (data) => api.post('/payments/razorpay/verify', data),
   verify: (data) => api.post('/payments/verify', data),
@@ -198,6 +200,8 @@ export const addressesApi = {
 // Customer API (Wallet, etc.)
 export const customerApi = {
   getWallet: () => api.get('/customers/wallet'),
+  topupWallet: (amount) => api.post('/customers/wallet/topup', { amount }),
+  getStates: () => api.get('/customers/states'),
 };
 
 export default api;

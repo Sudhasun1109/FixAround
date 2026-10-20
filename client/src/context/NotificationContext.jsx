@@ -1,6 +1,7 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { AuthContext } from './AuthContext';
 import { notificationsApi } from '../services/api';
+import { showToast } from '../components/common/Toast';
 
 export const NotificationContext = createContext(null);
 
@@ -9,6 +10,50 @@ export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const seenNotificationIdsRef = useRef(new Set());
+  const isFirstLoadRef = useRef(true);
+
+  // Request browser / mobile system notification permission
+  const requestNotificationPermission = useCallback(async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        try {
+          const res = await Notification.requestPermission();
+          return res;
+        } catch (e) {
+          console.warn('Notification permission request error:', e);
+        }
+      }
+      return Notification.permission;
+    }
+    return 'unsupported';
+  }, []);
+
+  const triggerMobilePopupNotification = useCallback((item) => {
+    // 1. In-app popup toast (visible on mobile / desktop screen)
+    showToast.info(`${item.title || 'FixAround Update'}: ${item.message || ''}`, {
+      duration: 5000,
+      position: 'top-center',
+    });
+
+    // 2. Native System / PWA Push Notification if permission granted
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        const notif = new Notification(item.title || 'FixAround Alert', {
+          body: item.message,
+          icon: '/pwa-192x192.png',
+          badge: '/pwa-192x192.png',
+          tag: `notif-${item.id}`,
+        });
+        notif.onclick = () => {
+          window.focus();
+          notif.close();
+        };
+      } catch (err) {
+        console.warn('Native notification failed:', err);
+      }
+    }
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -16,31 +61,48 @@ export function NotificationProvider({ children }) {
       setLoading(true);
       const res = await notificationsApi.getAll({ limit: 20 });
       const items = res.data?.notifications || res.data || [];
-      setNotifications(Array.isArray(items) ? items : []);
+      const notifArray = Array.isArray(items) ? items : [];
+      setNotifications(notifArray);
       
       const countRes = await notificationsApi.getUnreadCount();
-      const count = countRes.data?.count ?? countRes.data?.unreadCount ?? (Array.isArray(items) ? items.filter(n => !n.is_read).length : 0);
+      const count = countRes.data?.count ?? countRes.data?.unreadCount ?? notifArray.filter(n => !n.is_read).length;
       setUnreadCount(count);
+
+      // Check for incoming new unread notifications to popup
+      if (!isFirstLoadRef.current) {
+        notifArray.forEach((item) => {
+          if (!item.is_read && !seenNotificationIdsRef.current.has(item.id)) {
+            triggerMobilePopupNotification(item);
+          }
+        });
+      }
+
+      // Record seen IDs
+      notifArray.forEach((item) => {
+        seenNotificationIdsRef.current.add(item.id);
+      });
+      isFirstLoadRef.current = false;
     } catch (err) {
-      // Gracefully handle notifications failure without blocking app
       console.warn('Failed to fetch notifications:', err.message);
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, triggerMobilePopupNotification]);
 
-  // Initial fetch and 30-second polling
+  // Initial fetch and 20-second polling
   useEffect(() => {
     if (!isAuthenticated) {
       setNotifications([]);
       setUnreadCount(0);
+      seenNotificationIdsRef.current.clear();
+      isFirstLoadRef.current = true;
       return;
     }
 
     fetchNotifications();
     const interval = setInterval(() => {
       fetchNotifications();
-    }, 30000);
+    }, 20000);
 
     return () => clearInterval(interval);
   }, [isAuthenticated, fetchNotifications]);
@@ -76,6 +138,8 @@ export function NotificationProvider({ children }) {
     fetchNotifications,
     markRead,
     markAllRead,
+    requestNotificationPermission,
+    triggerMobilePopupNotification,
   };
 
   return (

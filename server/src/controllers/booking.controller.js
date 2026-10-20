@@ -60,12 +60,17 @@ async function cancel(req, res, next) {
 
 async function updateStatus(req, res, next) {
   try {
-    const { status, notes } = req.body;
+    const { status, notes, final_total } = req.body;
+    const extraFields = {};
+    if (final_total !== undefined && final_total !== null) {
+      extraFields.final_total = parseFloat(final_total);
+    }
     const booking = await bookingService.updateStatus(
       parseInt(req.params.id, 10),
       status,
       req.user,
-      notes
+      notes,
+      extraFields
     );
     return apiResponse.success(res, booking, 'Booking status updated successfully');
   } catch (err) {

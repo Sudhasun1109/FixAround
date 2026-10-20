@@ -51,7 +51,7 @@ export default function JobCompletion() {
 
     try {
       setSubmitting(true);
-      await bookingsApi.updateStatus(id, 'COMPLETED', completionNotes);
+      await bookingsApi.updateStatus(id, 'COMPLETED', completionNotes, { final_total: numAmount });
       showToast.success('Job marked as COMPLETED! Invoice generated for customer.');
       navigate(`/technician/earnings`);
     } catch (err) {

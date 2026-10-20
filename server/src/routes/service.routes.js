@@ -9,6 +9,10 @@ const { ROLES } = require('../utils/constants');
 const router = Router();
 
 router.get('/', serviceController.getAll);
+router.get('/states', (req, res, next) => {
+  const customerController = require('../controllers/customer.controller');
+  return customerController.getStates(req, res, next);
+});
 router.get('/stats', serviceController.getWithStats);
 router.get('/slug/:slug', serviceController.getById);
 router.get('/:id', serviceController.getById);

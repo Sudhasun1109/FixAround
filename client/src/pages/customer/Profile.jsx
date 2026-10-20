@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { authApi, addressesApi } from '../../services/api';
+import { authApi, addressesApi, customerApi } from '../../services/api';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
@@ -18,6 +18,7 @@ import {
   Home,
   Briefcase,
   Lock,
+  Navigation,
 } from 'lucide-react';
 
 export default function CustomerProfile() {
@@ -33,6 +34,8 @@ export default function CustomerProfile() {
   const [addresses, setAddresses] = useState([]);
   const [loadingAddresses, setLoadingAddresses] = useState(true);
   const [showAddressModal, setShowAddressModal] = useState(false);
+  const [statesList, setStatesList] = useState([]);
+  const [detectingLocation, setDetectingLocation] = useState(false);
   const [addressForm, setAddressForm] = useState({
     label: 'Home',
     address_line1: '',
@@ -40,6 +43,8 @@ export default function CustomerProfile() {
     city: 'New Delhi',
     state: 'Delhi',
     pincode: '110001',
+    latitude: null,
+    longitude: null,
     is_default: 0,
   });
   const [savingAddress, setSavingAddress] = useState(false);
@@ -50,6 +55,81 @@ export default function CustomerProfile() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
+
+  // Fetch states from dynamic API
+  useEffect(() => {
+    const fetchStates = async () => {
+      try {
+        const res = await customerApi.getStates();
+        const list = res?.data?.states || res?.data || [];
+        if (Array.isArray(list) && list.length > 0) {
+          setStatesList(list);
+          if (!addressForm.state) {
+            setAddressForm((prev) => ({ ...prev, state: list[0] }));
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load states from API:', err);
+      }
+    };
+    fetchStates();
+  }, []);
+
+  const handleDetectGPS = () => {
+    if (!navigator.geolocation) {
+      showToast.error('Geolocation is not supported on this browser');
+      return;
+    }
+    setDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setAddressForm((prev) => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng,
+        }));
+
+        try {
+          // Attempt reverse geocoding via OpenStreetMap Nominatim
+          const geoRes = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+          );
+          if (geoRes.ok) {
+            const geoData = await geoRes.json();
+            const addr = geoData.address || {};
+            const city = addr.city || addr.town || addr.village || addr.suburb || addr.state_district || 'New Delhi';
+            const state = addr.state || 'Delhi';
+            const postcode = addr.postcode || '';
+            const road = [addr.house_number, addr.road, addr.neighbourhood].filter(Boolean).join(', ');
+
+            setAddressForm((prev) => ({
+              ...prev,
+              city: city || prev.city,
+              state: state || prev.state,
+              pincode: postcode || prev.pincode,
+              address_line1: road || prev.address_line1 || `GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+              latitude: lat,
+              longitude: lng,
+            }));
+            showToast.success('Live GPS coordinates & locality detected!');
+          } else {
+            showToast.success(`Live GPS located: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+          }
+        } catch {
+          showToast.success(`Live GPS located: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        } finally {
+          setDetectingLocation(false);
+        }
+      },
+      (err) => {
+        setDetectingLocation(false);
+        showToast.error(`Location detection failed: ${err.message}`);
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
 
   const fetchAddresses = useCallback(async () => {
     try {
@@ -368,6 +448,39 @@ export default function CustomerProfile() {
         size="md"
       >
         <form onSubmit={handleSaveAddress} className="space-y-4">
+          {/* Live GPS detector bar */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Navigation className="w-4 h-4 text-fixteal-600 animate-pulse" />
+                Live GPS Location
+              </p>
+              <p className="text-[11px] text-slate-500">
+                {addressForm.latitude
+                  ? `Lat: ${Number(addressForm.latitude).toFixed(4)}, Lng: ${Number(addressForm.longitude).toFixed(4)}`
+                  : 'Detect current location to autofill your address'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleDetectGPS}
+              disabled={detectingLocation}
+              className="px-3 py-1.5 bg-fixteal-600 hover:bg-fixteal-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-all disabled:opacity-50"
+            >
+              {detectingLocation ? (
+                <>
+                  <Spinner size="sm" className="text-white" />
+                  <span>Locating...</span>
+                </>
+              ) : (
+                <>
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Use Live Location</span>
+                </>
+              )}
+            </button>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -420,12 +533,34 @@ export default function CustomerProfile() {
               value={addressForm.city}
               onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
             />
-            <Input
-              label="State"
-              required
-              value={addressForm.state}
-              onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
-            />
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                State <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={addressForm.state}
+                onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
+                className="w-full text-xs font-semibold py-2 px-2.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-fixteal-500 h-[38px]"
+                required
+              >
+                {statesList.length > 0 ? (
+                  statesList.map((st) => (
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="Delhi">Delhi</option>
+                    <option value="Maharashtra">Maharashtra</option>
+                    <option value="Karnataka">Karnataka</option>
+                    <option value="Tamil Nadu">Tamil Nadu</option>
+                  </>
+                )}
+              </select>
+            </div>
+
             <Input
               label="Pincode"
               required

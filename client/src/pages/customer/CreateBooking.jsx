@@ -38,10 +38,16 @@ export default function CreateBooking() {
 
   // Address
   const [address, setAddress] = useState('');
+  const [streetAddress, setStreetAddress] = useState('');
+  const [city, setCity] = useState('New Delhi');
+  const [state, setState] = useState('Delhi');
+  const [pincode, setPincode] = useState('110001');
+  const [statesList, setStatesList] = useState([]);
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
+  const [detectingGps, setDetectingGps] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
@@ -52,6 +58,18 @@ export default function CreateBooking() {
         const catList = catRes?.data?.categories || catRes?.data || [];
         setCategories(Array.isArray(catList) ? catList : []);
 
+        // Load states dynamically from API
+        try {
+          const statesRes = await servicesApi.getStates();
+          const list = statesRes?.data?.states || statesRes?.data || [];
+          if (Array.isArray(list) && list.length > 0) {
+            setStatesList(list);
+            if (!state) setState(list[0]);
+          }
+        } catch (err) {
+          console.warn('Failed to fetch states from API:', err);
+        }
+
         // Load saved addresses
         try {
           const addrRes = await addressesApi.getAll();
@@ -60,7 +78,11 @@ export default function CreateBooking() {
           if (addrList.length > 0) {
             const def = addrList.find((a) => a.is_default) || addrList[0];
             setSelectedAddressId(def.id);
-            setAddress(`${def.address_line1}, ${def.city} - ${def.pincode}`);
+            setStreetAddress(def.address_line1 || '');
+            setCity(def.city || 'New Delhi');
+            setState(def.state || 'Delhi');
+            setPincode(def.pincode || '110001');
+            setAddress(`${def.address_line1}, ${def.city}, ${def.state || 'Delhi'} - ${def.pincode}`);
             if (def.latitude && def.longitude) {
               setLatitude(def.latitude);
               setLongitude(def.longitude);
@@ -92,12 +114,15 @@ export default function CreateBooking() {
     const id = e.target.value;
     setSelectedAddressId(id);
     if (!id) {
-      setAddress('');
       return;
     }
     const found = savedAddresses.find((a) => String(a.id) === String(id));
     if (found) {
-      setAddress(`${found.address_line1}, ${found.city} - ${found.pincode}`);
+      setStreetAddress(found.address_line1 || '');
+      setCity(found.city || 'New Delhi');
+      setState(found.state || 'Delhi');
+      setPincode(found.pincode || '110001');
+      setAddress(`${found.address_line1}, ${found.city}, ${found.state || 'Delhi'} - ${found.pincode}`);
       setLatitude(found.latitude || null);
       setLongitude(found.longitude || null);
     }
@@ -108,16 +133,50 @@ export default function CreateBooking() {
       showToast.error('Geolocation is not supported by your browser');
       return;
     }
+    setDetectingGps(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLatitude(pos.coords.latitude);
-        setLongitude(pos.coords.longitude);
-        setAddress(`GPS Coords: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
-        showToast.success('Location coordinates acquired');
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setLatitude(lat);
+        setLongitude(lng);
+
+        try {
+          const geoRes = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+          );
+          if (geoRes.ok) {
+            const geoData = await geoRes.json();
+            const addr = geoData.address || {};
+            const detectedCity = addr.city || addr.town || addr.village || addr.suburb || addr.state_district || 'New Delhi';
+            const detectedState = addr.state || 'Delhi';
+            const detectedPostcode = addr.postcode || '';
+            const road = [addr.house_number, addr.road, addr.neighbourhood].filter(Boolean).join(', ');
+
+            if (road) setStreetAddress(road);
+            if (detectedCity) setCity(detectedCity);
+            if (detectedState) setState(detectedState);
+            if (detectedPostcode) setPincode(detectedPostcode);
+
+            const compiled = `${road || 'Current Location'}, ${detectedCity}, ${detectedState} - ${detectedPostcode}`;
+            setAddress(compiled);
+            showToast.success('Live location and address detected!');
+          } else {
+            setAddress(`GPS Coords: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+            showToast.success('Location coordinates acquired');
+          }
+        } catch {
+          setAddress(`GPS Coords: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+          showToast.success('Location coordinates acquired');
+        } finally {
+          setDetectingGps(false);
+        }
       },
       (err) => {
+        setDetectingGps(false);
         showToast.error(`Location error: ${err.message}`);
-      }
+      },
+      { timeout: 10000, enableHighAccuracy: true }
     );
   };
 
@@ -131,7 +190,12 @@ export default function CreateBooking() {
       showToast.error('Please enter a brief booking summary');
       return;
     }
-    if (!address.trim()) {
+
+    const finalAddress = streetAddress.trim()
+      ? `${streetAddress.trim()}, ${city.trim()}, ${state.trim()} - ${pincode.trim()}`
+      : address.trim();
+
+    if (!finalAddress) {
       showToast.error('Please provide service address');
       return;
     }
@@ -144,7 +208,7 @@ export default function CreateBooking() {
         description: description.trim(),
         urgency,
         is_emergency: urgency === 'emergency' ? 1 : 0,
-        customer_address: address.trim(),
+        customer_address: finalAddress,
         customer_latitude: latitude,
         customer_longitude: longitude,
         address_id: selectedAddressId ? parseInt(selectedAddressId, 10) : undefined,
@@ -289,10 +353,11 @@ export default function CreateBooking() {
                 <button
                   type="button"
                   onClick={handleDetectLocation}
-                  className="text-xs font-semibold text-fixteal-600 hover:text-fixteal-700 flex items-center gap-1"
+                  disabled={detectingGps}
+                  className="text-xs font-semibold text-fixteal-600 hover:text-fixteal-700 flex items-center gap-1.5 px-2.5 py-1 bg-fixteal-50 rounded-lg border border-fixteal-200"
                 >
-                  <MapPin className="w-3.5 h-3.5" />
-                  Use GPS
+                  <MapPin className="w-3.5 h-3.5 text-fixteal-600" />
+                  {detectingGps ? 'Locating...' : 'Use Live GPS'}
                 </button>
               </div>
 
@@ -309,11 +374,58 @@ export default function CreateBooking() {
               )}
 
               <Input
-                placeholder="Flat / House No, Street, Landmark, Pincode"
+                label="House / Flat / Street Address"
+                placeholder="e.g. Flat 402, Sunshine Heights, Main Road"
                 required
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                value={streetAddress || address}
+                onChange={(e) => {
+                  setStreetAddress(e.target.value);
+                  setAddress(e.target.value);
+                }}
               />
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Input
+                  label="City"
+                  required
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                />
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    State <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                    className="w-full text-xs font-semibold py-2 px-2.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-fixteal-500 h-[38px]"
+                    required
+                  >
+                    {statesList.length > 0 ? (
+                      statesList.map((st) => (
+                        <option key={st} value={st}>
+                          {st}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="Delhi">Delhi</option>
+                        <option value="Maharashtra">Maharashtra</option>
+                        <option value="Karnataka">Karnataka</option>
+                        <option value="Tamil Nadu">Tamil Nadu</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                <Input
+                  label="Pincode"
+                  required
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value)}
+                />
+              </div>
 
               <div className="space-y-1.5 pt-1">
                 <div className="flex items-center justify-between text-xs text-slate-500">
@@ -321,7 +433,7 @@ export default function CreateBooking() {
                     <MapPin className="w-3.5 h-3.5 text-fixteal-600" />
                     Interactive Map Pin
                   </span>
-                  <span>Click map to adjust pin</span>
+                  <span>Click map to adjust location pin</span>
                 </div>
                 <InteractiveMap
                   latitude={latitude}
@@ -331,9 +443,6 @@ export default function CreateBooking() {
                   onLocationSelect={({ latitude: lat, longitude: lng }) => {
                     setLatitude(lat);
                     setLongitude(lng);
-                    if (!address || address.startsWith('GPS Coords:')) {
-                      setAddress(`GPS Coords: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-                    }
                     showToast.success('Location pinpointed on map');
                   }}
                 />

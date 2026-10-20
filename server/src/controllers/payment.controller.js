@@ -81,6 +81,17 @@ async function verifyRazorpay(req, res, next) {
   }
 }
 
+async function payWithWallet(req, res, next) {
+  try {
+    const bookingId = parseInt(req.body.booking_id || req.params.id, 10);
+    const pointsToRedeem = parseInt(req.body.points_redeemed || 0, 10);
+    const result = await paymentService.payWithWallet(bookingId, req.user.id, pointsToRedeem);
+    return apiResponse.success(res, result, result.message, 200);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   initiate,
   getByBooking,
@@ -88,5 +99,6 @@ module.exports = {
   webhook,
   getMyPayments,
   createRazorpayOrder,
-  verifyRazorpay
+  verifyRazorpay,
+  payWithWallet
 };

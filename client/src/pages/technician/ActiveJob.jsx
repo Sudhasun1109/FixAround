@@ -33,9 +33,6 @@ export default function ActiveJob() {
   const [updating, setUpdating] = useState(false);
   const [notes, setNotes] = useState('');
 
-  // Job duration timer
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-
   const fetchJob = useCallback(async () => {
     try {
       setLoading(true);
@@ -74,23 +71,6 @@ export default function ActiveJob() {
   useEffect(() => {
     fetchJob();
   }, [fetchJob]);
-
-  // Elapsed time counter
-  useEffect(() => {
-    if (!booking) return;
-    const startTime = booking.started_at || booking.accepted_at || booking.created_at;
-    if (!startTime) return;
-
-    const startMs = new Date(startTime).getTime();
-    const updateElapsed = () => {
-      const now = Date.now();
-      setElapsedSeconds(Math.max(0, Math.floor((now - startMs) / 1000)));
-    };
-
-    updateElapsed();
-    const interval = setInterval(updateElapsed, 1000);
-    return () => clearInterval(interval);
-  }, [booking]);
 
   const handleTransition = async (nextStatus) => {
     try {
@@ -132,14 +112,11 @@ export default function ActiveJob() {
     );
   }
 
-  const hours = Math.floor(elapsedSeconds / 3600);
-  const minutes = Math.floor((elapsedSeconds % 3600) / 60);
-  const seconds = elapsedSeconds % 60;
   const isEmergency = Boolean(booking.is_emergency || booking.urgency === 'emergency');
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 py-4">
-      {/* Top Banner / Timer */}
+      {/* Top Banner */}
       <div className="bg-fixblue-900 text-white p-6 rounded-3xl shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -157,15 +134,15 @@ export default function ActiveJob() {
           </h1>
         </div>
 
-        {/* Stopwatch */}
+        {/* Confirmed Job Badge */}
         <div className="bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 flex items-center gap-3">
-          <Clock className="w-5 h-5 text-fixteal-400" />
+          <CheckCircle2 className="w-5 h-5 text-fixteal-400" />
           <div>
             <span className="text-[10px] text-slate-300 uppercase tracking-wider block font-semibold">
-              Elapsed Time
+              Assignment Accepted
             </span>
-            <span className="text-lg font-mono font-extrabold text-white">
-              {String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+            <span className="text-xs font-bold text-white">
+              {booking.scheduled_at ? formatDateTime(booking.scheduled_at) : 'Active Service'}
             </span>
           </div>
         </div>

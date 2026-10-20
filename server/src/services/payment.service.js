@@ -421,6 +421,34 @@ async function processPaymentSuccess(paymentId) {
       }
     }
 
+    // 4. Award 20 loyalty reward points to customer for completing the job
+    if (booking.customer_id) {
+      await conn.query(
+        `UPDATE customer_profiles 
+         SET reward_points = reward_points + 20 
+         WHERE user_id = ?`,
+        [booking.customer_id]
+      );
+
+      const [cProf] = await conn.query(
+        'SELECT reward_points FROM customer_profiles WHERE user_id = ?',
+        [booking.customer_id]
+      );
+      const newPts = cProf[0]?.reward_points || 20;
+
+      await conn.query(
+        `INSERT INTO reward_points_history 
+         (customer_id, booking_id, points, type, description, balance_after)
+         VALUES (?, ?, 20, 'EARNED', ?, ?)`,
+        [
+          booking.customer_id,
+          booking.id,
+          `Earned 20 Reward Points for service #${booking.booking_number}`,
+          newPts
+        ]
+      );
+    }
+
     await conn.commit();
   } catch (err) {
     await conn.rollback();
@@ -588,11 +616,138 @@ async function getByCustomer(customerId, options = {}) {
   return await paymentRepo.findByCustomerId(customerId, options);
 }
 
+/**
+ * Customer pays booking invoice directly from FixAround Wallet
+ * Can optionally redeem reward points (5 points = ₹1)
+ * @param {number} bookingId
+ * @param {number} customerId
+ * @param {number} [pointsToRedeem=0]
+ */
+async function payWithWallet(bookingId, customerId, pointsToRedeem = 0) {
+  const booking = await bookingRepo.findById(bookingId);
+  if (!booking) {
+    throw AppError.notFound('Booking not found');
+  }
+
+  if (Number(booking.customer_id) !== Number(customerId)) {
+    throw AppError.forbidden('You are not authorized to pay for this booking');
+  }
+
+  // Calculate gross amount
+  const [invoices] = await pool.query('SELECT * FROM invoices WHERE booking_id = ? ORDER BY id DESC LIMIT 1', [bookingId]);
+  const invoice = invoices[0];
+  let rawAmount = invoice ? parseFloat(invoice.total_amount) : parseFloat(booking.final_total || booking.estimated_total || 500);
+
+  // Check customer profile for wallet and reward points
+  const [profiles] = await pool.query(
+    'SELECT wallet_balance, reward_points FROM customer_profiles WHERE user_id = ?',
+    [customerId]
+  );
+  const profile = profiles[0] || { wallet_balance: 0, reward_points: 0 };
+  const currentWallet = parseFloat(profile.wallet_balance || 0);
+  const currentPoints = parseInt(profile.reward_points || 0, 10);
+
+  // Calculate points redemption: 5 points = ₹1
+  let pointsUsed = 0;
+  let pointsDiscount = 0;
+  if (pointsToRedeem > 0) {
+    pointsUsed = Math.min(Number(pointsToRedeem), currentPoints);
+    pointsDiscount = Math.floor(pointsUsed / 5);
+    if (pointsDiscount > rawAmount) {
+      pointsDiscount = Math.floor(rawAmount);
+      pointsUsed = pointsDiscount * 5;
+    }
+  }
+
+  const finalPayable = Math.max(0, Math.round((rawAmount - pointsDiscount) * 100) / 100);
+
+  if (currentWallet < finalPayable) {
+    throw AppError.badRequest(
+      `Insufficient wallet balance (₹${currentWallet.toFixed(2)}). Total payable is ₹${finalPayable.toFixed(2)}.`
+    );
+  }
+
+  const conn = await pool.getConnection();
+  let paymentId = null;
+  try {
+    await conn.beginTransaction();
+
+    // 1. Deduct wallet
+    if (finalPayable > 0) {
+      await conn.query(
+        'UPDATE customer_profiles SET wallet_balance = wallet_balance - ? WHERE user_id = ?',
+        [finalPayable, customerId]
+      );
+    }
+
+    // 2. Deduct points if any
+    if (pointsUsed > 0) {
+      await conn.query(
+        'UPDATE customer_profiles SET reward_points = reward_points - ? WHERE user_id = ?',
+        [pointsUsed, customerId]
+      );
+
+      const [pRes] = await conn.query('SELECT reward_points FROM customer_profiles WHERE user_id = ?', [customerId]);
+      const ptsAfter = pRes[0]?.reward_points || 0;
+
+      await conn.query(
+        `INSERT INTO reward_points_history (customer_id, booking_id, points, type, description, balance_after)
+         VALUES (?, ?, ?, 'REDEEMED', ?, ?)`,
+        [customerId, bookingId, pointsUsed, `Redeemed ${pointsUsed} pts for ₹${pointsDiscount} discount on #${booking.booking_number}`, ptsAfter]
+      );
+    }
+
+    // 3. Get updated wallet balance
+    const [wRes] = await conn.query('SELECT wallet_balance FROM customer_profiles WHERE user_id = ?', [customerId]);
+    const walletAfter = wRes[0]?.wallet_balance || 0;
+
+    // 4. Log wallet transaction
+    if (finalPayable > 0) {
+      await conn.query(
+        `INSERT INTO wallet_transactions (customer_id, booking_id, amount, type, description, balance_after)
+         VALUES (?, ?, ?, 'DEBIT', ?, ?)`,
+        [customerId, bookingId, finalPayable, `Paid for repair service #${booking.booking_number}`, walletAfter]
+      );
+    }
+
+    // 5. Create Payment record with 'WALLET' method
+    const paymentNumber = generatePaymentNumber();
+    const [payResult] = await conn.query(
+      `INSERT INTO payments (
+        payment_number, booking_id, customer_id, amount, payment_method, status, is_sandbox, paid_at
+      ) VALUES (?, ?, ?, ?, 'WALLET', 'SUCCESS', 0, UTC_TIMESTAMP())`,
+      [paymentNumber, bookingId, customerId, rawAmount]
+    );
+    paymentId = payResult.insertId;
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+
+  // 6. Complete booking, generate invoice, award 20 new reward points
+  await processPaymentSuccess(paymentId);
+
+  return {
+    success: true,
+    payment_id: paymentId,
+    amount_paid: finalPayable,
+    points_redeemed: pointsUsed,
+    points_discount: pointsDiscount,
+    points_earned: 20,
+    message: `Payment of ₹${finalPayable} completed using FixAround Wallet! You earned 20 Reward Points.`
+  };
+}
+
 module.exports = {
   initiate,
   createRazorpayOrder,
   verifyRazorpayPayment,
   verifySandboxPayment,
+  payWithWallet,
   handleWebhook,
   processPaymentSuccess,
   getByBooking,

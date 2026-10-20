@@ -6,6 +6,9 @@ const { ROLES } = require('../utils/constants');
 
 const router = Router();
 
+// Public or customer states endpoint
+router.get('/states', customerController.getStates);
+
 router.use(verifyToken, authorize(ROLES.CUSTOMER, ROLES.ADMIN));
 
 router.get('/addresses', customerController.getAddresses);
@@ -14,7 +17,8 @@ router.put('/addresses/:id', customerController.updateAddress);
 router.patch('/addresses/:id/default', customerController.setDefaultAddress);
 router.delete('/addresses/:id', customerController.deleteAddress);
 
-// Customer Wallet
+// Customer Wallet & Topup
 router.get('/wallet', customerController.getWallet);
+router.post('/wallet/topup', customerController.topupWallet);
 
 module.exports = router;

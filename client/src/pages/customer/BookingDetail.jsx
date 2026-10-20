@@ -213,7 +213,7 @@ export default function BookingDetail() {
               variant="outline"
               size="sm"
               icon={XCircle}
-              onClick={() => setShowCancelModal(false)}
+              onClick={() => setShowCancelModal(true)}
               className="text-rose-600 border-rose-200 hover:bg-rose-50"
             >
               Cancel Request

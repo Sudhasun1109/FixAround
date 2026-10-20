@@ -38,6 +38,7 @@ const InvoiceView = lazy(() => import('../pages/customer/InvoiceView'));
 const BookingHistory = lazy(() => import('../pages/customer/BookingHistory'));
 const CustomerReviews = lazy(() => import('../pages/customer/Reviews'));
 const WarrantyClaims = lazy(() => import('../pages/customer/WarrantyClaims'));
+const CustomerWallet = lazy(() => import('../pages/customer/Wallet'));
 const CustomerProfile = lazy(() => import('../pages/customer/Profile'));
 const CustomerNotifications = lazy(() => import('../pages/customer/Notifications'));
 
@@ -111,6 +112,7 @@ export default function AppRouter() {
           <Route path="/customer/invoices/:id" element={<InvoiceView />} />
           <Route path="/customer/reviews" element={<CustomerReviews />} />
           <Route path="/customer/claims" element={<WarrantyClaims />} />
+          <Route path="/customer/wallet" element={<CustomerWallet />} />
           <Route path="/customer/profile" element={<CustomerProfile />} />
           <Route path="/customer/notifications" element={<CustomerNotifications />} />
         </Route>

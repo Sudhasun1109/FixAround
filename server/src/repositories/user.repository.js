@@ -8,7 +8,7 @@ const { pool } = require('../config/database');
 async function findByEmail(email, conn = pool) {
   const [rows] = await conn.query(
     `SELECT u.*, 
-            cp.default_address_id, cp.preferred_language, cp.wallet_balance,
+            cp.default_address_id, cp.preferred_language, cp.wallet_balance, cp.reward_points,
             tp.id AS technician_profile_id, tp.verification_status, tp.is_available, tp.is_online
      FROM users u
      LEFT JOIN customer_profiles cp ON cp.user_id = u.id
@@ -27,7 +27,7 @@ async function findByEmail(email, conn = pool) {
 async function findById(id, conn = pool) {
   const [rows] = await conn.query(
     `SELECT u.*, 
-            cp.default_address_id, cp.preferred_language, cp.wallet_balance,
+            cp.default_address_id, cp.preferred_language, cp.wallet_balance, cp.reward_points,
             tp.id AS technician_profile_id, tp.verification_status, tp.is_available, tp.is_online,
             tp.avg_rating, tp.completed_jobs, tp.service_city
      FROM users u
@@ -47,7 +47,7 @@ async function findById(id, conn = pool) {
 async function findByGoogleId(googleId, conn = pool) {
   const [rows] = await conn.query(
     `SELECT u.*, 
-            cp.default_address_id, cp.preferred_language, cp.wallet_balance,
+            cp.default_address_id, cp.preferred_language, cp.wallet_balance, cp.reward_points,
             tp.id AS technician_profile_id, tp.verification_status, tp.is_available, tp.is_online,
             tp.avg_rating, tp.completed_jobs, tp.service_city
      FROM users u
