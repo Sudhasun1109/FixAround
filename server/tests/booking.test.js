@@ -363,4 +363,26 @@ describe('Booking & Assignment API', () => {
       expect(res.body.success).toBe(false);
     });
   });
+
+  // ==================== INCOMING REQUESTS ====================
+
+  describe('GET /api/v1/bookings/incoming', () => {
+    it('should allow technician to fetch incoming job requests', async () => {
+      const res = await request(app)
+        .get('/api/v1/bookings/incoming')
+        .set('Authorization', `Bearer ${techToken}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(Array.isArray(res.body.data.requests)).toBe(true);
+    });
+
+    it('should deny non-technician from accessing incoming requests', async () => {
+      const res = await request(app)
+        .get('/api/v1/bookings/incoming')
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(res.statusCode).toBe(403);
+    });
+  });
 });

@@ -64,6 +64,11 @@ function errorHandler(err, req, res, next) {
     console.error(`[CRITICAL] [${req.method}] ${req.originalUrl} - ${statusCode}: ${message}`);
   }
 
+  // In production, redact raw internal system exception messages
+  if (config.isProduction && statusCode >= 500 && !err.isOperational) {
+    message = 'An unexpected internal error occurred. Please try again later.';
+  }
+
   const responseData = {
     success: false,
     message,

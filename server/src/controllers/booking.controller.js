@@ -30,6 +30,15 @@ async function getMyBookings(req, res, next) {
   }
 }
 
+async function getIncomingRequests(req, res, next) {
+  try {
+    const requests = await assignmentService.getIncomingRequests(req.user.id);
+    return apiResponse.success(res, { requests }, 'Incoming requests retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function getById(req, res, next) {
   try {
     const booking = await bookingService.getById(parseInt(req.params.id, 10), req.user);
@@ -140,6 +149,7 @@ async function getAll(req, res, next) {
 module.exports = {
   create,
   getMyBookings,
+  getIncomingRequests,
   getById,
   cancel,
   updateStatus,

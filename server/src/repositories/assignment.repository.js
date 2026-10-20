@@ -195,12 +195,45 @@ async function getRejectedTechnicianIds(bookingId, conn = pool) {
   return rows.map((r) => r.technician_id);
 }
 
+/**
+ * Get active incoming dispatch offers for technician
+ * @param {number} technicianId (users.id)
+ * @param {Object} [conn=pool]
+ */
+async function getIncomingForTechnician(technicianId, conn = pool) {
+  const query = `
+    SELECT ba.id AS assignment_id, ba.id AS id,
+           b.id AS booking_id, b.id, b.booking_number, b.title, b.description,
+           b.status AS booking_status, b.is_emergency, b.urgency,
+           b.customer_address, b.customer_latitude, b.customer_longitude,
+           b.created_at, b.scheduled_at,
+           ba.deadline, ba.attempt_number, COALESCE(ba.status, 'PENDING') AS assignment_status,
+           sc.name AS category_name, sc.slug AS category_slug,
+           c.id AS customer_id, c.first_name AS customer_first_name, c.last_name AS customer_last_name,
+           CONCAT(c.first_name, ' ', c.last_name) AS customer_name,
+           c.phone AS customer_phone
+    FROM bookings b
+    LEFT JOIN booking_assignments ba ON ba.booking_id = b.id AND ba.technician_id = ? AND ba.status = 'PENDING'
+    JOIN service_categories sc ON sc.id = b.category_id
+    JOIN users c ON c.id = b.customer_id
+    WHERE (
+      (ba.technician_id = ? AND ba.status = 'PENDING' AND (ba.deadline IS NULL OR ba.deadline > UTC_TIMESTAMP()))
+      OR
+      (b.technician_id = ? AND b.status = 'ASSIGNED')
+    )
+    ORDER BY b.id DESC
+  `;
+  const [rows] = await conn.query(query, [technicianId, technicianId, technicianId]);
+  return rows;
+}
+
 module.exports = {
   create,
   findById,
   findByBookingId,
   findPendingByBookingId,
   findByTechnicianId,
+  getIncomingForTechnician,
   updateStatus,
   findExpired,
   countByBooking,

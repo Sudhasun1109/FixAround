@@ -85,7 +85,11 @@ async function getByTechnician(technicianId, options = {}) {
  * @param {number} technicianId (users.id)
  */
 async function getSummary(technicianId) {
-  return await earningsRepo.getTotal(technicianId);
+  const summary = await earningsRepo.getTotal(technicianId);
+  return {
+    ...summary,
+    total_earned: summary.total_net
+  };
 }
 
 module.exports = {

@@ -212,9 +212,22 @@ async function getByBooking(bookingId) {
   return await estimateRepo.findByBookingId(bookingId);
 }
 
+/**
+ * Get estimate by ID
+ * @param {number} estimateId
+ */
+async function getById(estimateId) {
+  const estimate = await estimateRepo.findById(estimateId);
+  if (!estimate) {
+    throw AppError.notFound('Estimate not found');
+  }
+  return estimate;
+}
+
 module.exports = {
   create,
   approve,
   reject,
-  getByBooking
+  getByBooking,
+  getById
 };

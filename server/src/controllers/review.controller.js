@@ -1,9 +1,10 @@
 const reviewService = require('../services/review.service');
+const { pool } = require('../config/database');
 const apiResponse = require('../utils/apiResponse');
 
 async function create(req, res, next) {
   try {
-    const bookingId = parseInt(req.params.id, 10);
+    const bookingId = parseInt(req.params.id || req.body.booking_id, 10);
     const review = await reviewService.create(bookingId, req.user.id, req.body);
     return apiResponse.success(res, review, 'Review submitted successfully', 201);
   } catch (err) {
@@ -61,6 +62,36 @@ async function getMyReviews(req, res, next) {
   }
 }
 
+async function update(req, res, next) {
+  try {
+    const reviewId = parseInt(req.params.id, 10);
+    const { rating, comment, title } = req.body;
+    await pool.query(
+      `UPDATE reviews SET rating = COALESCE(?, rating), comment = COALESCE(?, comment), title = COALESCE(?, title)
+       WHERE id = ? AND customer_id = ?`,
+      [rating, comment, title, reviewId, req.user.id]
+    );
+    const [rows] = await pool.query('SELECT * FROM reviews WHERE id = ?', [reviewId]);
+    return apiResponse.success(res, rows[0], 'Review updated successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deleteReview(req, res, next) {
+  try {
+    const reviewId = parseInt(req.params.id, 10);
+    if (req.user.role === 'admin') {
+      await pool.query('DELETE FROM reviews WHERE id = ?', [reviewId]);
+    } else {
+      await pool.query('DELETE FROM reviews WHERE id = ? AND customer_id = ?', [reviewId, req.user.id]);
+    }
+    return apiResponse.success(res, { id: reviewId }, 'Review deleted');
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function getAll(req, res, next) {
   try {
     const { page, limit, rating, is_visible } = req.query;
@@ -85,5 +116,7 @@ module.exports = {
   create,
   getTechnicianReviews,
   getMyReviews,
+  update,
+  deleteReview,
   getAll
 };

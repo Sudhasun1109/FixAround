@@ -129,6 +129,44 @@ async function getTechnicianReviews(req, res, next) {
   }
 }
 
+async function getSkills(req, res, next) {
+  try {
+    const technicianId = parseInt(req.params.id, 10);
+    const skills = await technicianService.getSkillsByTechnicianId(technicianId);
+    return apiResponse.success(res, skills, 'Technician skills retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function updateLocation(req, res, next) {
+  try {
+    const { latitude, longitude } = req.body;
+    await technicianService.updateProfile(req.user.id, { latitude, longitude });
+    return apiResponse.success(res, { latitude, longitude }, 'Location updated successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function uploadDocument(req, res, next) {
+  try {
+    const result = await technicianService.uploadDocument(req.user.id, req.body);
+    return apiResponse.success(res, result, 'Document submitted for verification', 201);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getDocuments(req, res, next) {
+  try {
+    const documents = await technicianService.getDocuments(req.user.id);
+    return apiResponse.success(res, documents, 'Technician documents retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getProfile,
   getById,
@@ -139,5 +177,9 @@ module.exports = {
   getAll,
   getStats,
   updateSkills,
-  getTechnicianReviews
+  getTechnicianReviews,
+  getSkills,
+  updateLocation,
+  uploadDocument,
+  getDocuments
 };

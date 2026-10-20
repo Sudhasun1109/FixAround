@@ -294,13 +294,26 @@ async function assignTechnician(bookingId, technicianUserId, adminId) {
     throw AppError.notFound('Booking not found');
   }
 
-  const tech = await userRepo.findById(technicianUserId);
+  // Support both user_id and technician_profiles.id
+  let targetUserId = parseInt(technicianUserId, 10);
+  let tech = await userRepo.findById(targetUserId);
+
+  if (!tech || tech.role !== ROLES.TECHNICIAN) {
+    // Check if the passed ID was actually a technician_profiles.id
+    const technicianRepo = require('../repositories/technician.repository');
+    const profile = await technicianRepo.findById(targetUserId);
+    if (profile && profile.user_id) {
+      targetUserId = profile.user_id;
+      tech = await userRepo.findById(targetUserId);
+    }
+  }
+
   if (!tech || tech.role !== ROLES.TECHNICIAN) {
     throw AppError.badRequest('Selected user is not a valid technician');
   }
 
   const assignmentService = require('./assignment.service');
-  return await assignmentService.createAssignment(bookingId, technicianUserId, 1);
+  return await assignmentService.createAssignment(bookingId, targetUserId, 1);
 }
 
 /**

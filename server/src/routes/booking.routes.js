@@ -21,6 +21,8 @@ router.post(
 );
 
 router.get('/', verifyToken, bookingController.getMyBookings);
+router.get('/incoming', verifyToken, authorize(ROLES.TECHNICIAN), bookingController.getIncomingRequests);
+router.get('/my-bookings', verifyToken, bookingController.getMyBookings);
 router.get('/:id', verifyToken, bookingController.getById);
 router.get('/:id/timeline', verifyToken, bookingController.getTimeline);
 

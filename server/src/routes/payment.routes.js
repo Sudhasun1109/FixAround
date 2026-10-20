@@ -11,6 +11,12 @@ const router = Router();
 // Customer my-payments
 router.get('/my-payments', verifyToken, authorize(ROLES.CUSTOMER), paymentController.getMyPayments);
 
+// Direct payments API (used by client paymentsApi)
+router.post('/initiate', verifyToken, authorize(ROLES.CUSTOMER), paymentController.initiate);
+router.post('/sandbox-pay', verifyToken, authorize(ROLES.CUSTOMER), paymentController.verify);
+router.post('/verify', verifyToken, authorize(ROLES.CUSTOMER), paymentController.verify);
+router.get('/booking/:bookingId', verifyToken, paymentController.getByBooking);
+
 // Public webhook
 router.post('/payments/webhook', paymentController.webhook);
 router.post('/webhook', paymentController.webhook);

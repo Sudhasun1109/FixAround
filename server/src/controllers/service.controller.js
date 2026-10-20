@@ -57,11 +57,22 @@ async function getWithStats(req, res, next) {
   }
 }
 
+async function deleteCategory(req, res, next) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const category = await serviceService.updateStatus(id, false);
+    return apiResponse.success(res, category, 'Service category deactivated');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getAll,
   getById,
   create,
   update,
   updateStatus,
+  deleteCategory,
   getWithStats
 };

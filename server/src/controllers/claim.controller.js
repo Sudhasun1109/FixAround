@@ -3,7 +3,7 @@ const apiResponse = require('../utils/apiResponse');
 
 async function create(req, res, next) {
   try {
-    const bookingId = parseInt(req.params.id, 10);
+    const bookingId = parseInt(req.params.id || req.body.booking_id, 10);
     const claim = await claimService.create(bookingId, req.user.id, req.body);
     return apiResponse.success(res, claim, 'Warranty claim filed successfully', 201);
   } catch (err) {

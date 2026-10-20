@@ -1,7 +1,11 @@
 const adminService = require('../services/admin.service');
 const userRepo = require('../repositories/user.repository');
+const technicianRepo = require('../repositories/technician.repository');
 const bookingService = require('../services/booking.service');
 const assignmentService = require('../services/assignment.service');
+const claimService = require('../services/claim.service');
+const reviewService = require('../services/review.service');
+const { pool } = require('../config/database');
 const apiResponse = require('../utils/apiResponse');
 const AppError = require('../utils/apiError');
 
@@ -154,14 +158,132 @@ async function reassignBooking(req, res, next) {
   }
 }
 
+async function getUserById(req, res, next) {
+  try {
+    const user = await userRepo.findById(parseInt(req.params.id, 10));
+    if (!user) throw AppError.notFound('User not found');
+    return apiResponse.success(res, user, 'User retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getEmergencyBookings(req, res, next) {
+  try {
+    const { page, limit, status, search } = req.query;
+    const result = await adminService.getBookingReport({
+      page: parseInt(page || '1', 10),
+      limit: parseInt(limit || '20', 10),
+      status,
+      isEmergency: true,
+      search
+    });
+    return apiResponse.paginated(
+      res,
+      result.bookings,
+      { page, limit, total: result.total },
+      'Emergency bookings retrieved'
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getTechniciansForVerification(req, res, next) {
+  try {
+    const { page, limit, status, search } = req.query;
+    const result = await technicianRepo.findAll({
+      page: parseInt(page || '1', 10),
+      limit: parseInt(limit || '20', 10),
+      status: status || 'pending',
+      search
+    });
+    return apiResponse.paginated(
+      res,
+      result.technicians,
+      { page, limit, total: result.total },
+      'Technicians for verification retrieved'
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getClaims(req, res, next) {
+  try {
+    const { page, limit, status } = req.query;
+    const result = await claimService.getAll({
+      page: parseInt(page || '1', 10),
+      limit: parseInt(limit || '20', 10),
+      status
+    });
+    return apiResponse.paginated(
+      res,
+      result.claims,
+      { page, limit, total: result.total },
+      'Warranty claims retrieved'
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getReviews(req, res, next) {
+  try {
+    const { page, limit, rating, is_visible } = req.query;
+    const result = await reviewService.getAll({
+      page: parseInt(page || '1', 10),
+      limit: parseInt(limit || '20', 10),
+      rating: rating ? parseInt(rating, 10) : null,
+      isVisible: is_visible !== undefined ? is_visible === 'true' || is_visible === '1' : null
+    });
+    return apiResponse.paginated(
+      res,
+      result.reviews,
+      { page, limit, total: result.total },
+      'Reviews retrieved'
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function toggleReviewVisibility(req, res, next) {
+  try {
+    const reviewId = parseInt(req.params.id, 10);
+    const { is_visible } = req.body;
+    await pool.query('UPDATE reviews SET is_visible = ? WHERE id = ?', [is_visible ? 1 : 0, reviewId]);
+    return apiResponse.success(res, { id: reviewId, is_visible: !!is_visible }, 'Review visibility updated');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deleteReview(req, res, next) {
+  try {
+    const reviewId = parseInt(req.params.id, 10);
+    await pool.query('DELETE FROM reviews WHERE id = ?', [reviewId]);
+    return apiResponse.success(res, { id: reviewId }, 'Review deleted');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboard,
   getUsers,
+  getUserById,
   updateUserStatus,
   getBookings,
+  getEmergencyBookings,
   getPayments,
   getSettings,
   updateSetting,
   getAuditLogs,
-  reassignBooking
+  reassignBooking,
+  getTechniciansForVerification,
+  getClaims,
+  getReviews,
+  toggleReviewVisibility,
+  deleteReview
 };

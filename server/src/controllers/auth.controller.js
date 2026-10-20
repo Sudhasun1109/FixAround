@@ -20,6 +20,16 @@ async function login(req, res, next) {
   }
 }
 
+async function googleLogin(req, res, next) {
+  try {
+    const { credential, role } = req.body;
+    const result = await authService.googleLogin(credential, role);
+    return apiResponse.success(res, result, 'Google authentication successful', 200);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function getMe(req, res, next) {
   try {
     const user = await authService.getProfile(req.user.id);
@@ -38,6 +48,18 @@ async function updateProfile(req, res, next) {
   }
 }
 
+async function changePassword(req, res, next) {
+  try {
+    const { current_password, new_password, currentPassword, newPassword } = req.body;
+    const cur = current_password || currentPassword;
+    const nw = new_password || newPassword;
+    await authService.changePassword(req.user.id, cur, nw);
+    return apiResponse.success(res, null, 'Password changed successfully', 200);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function logout(req, res, next) {
   try {
     // Client-side JWT invalidation (token removal)
@@ -50,7 +72,9 @@ async function logout(req, res, next) {
 module.exports = {
   register,
   login,
+  googleLogin,
   getMe,
   updateProfile,
+  changePassword,
   logout
 };

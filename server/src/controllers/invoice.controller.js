@@ -30,7 +30,8 @@ async function getMyInvoices(req, res, next) {
 
 async function getByBooking(req, res, next) {
   try {
-    const invoice = await invoiceService.getByBooking(parseInt(req.params.id, 10), req.user);
+    const bookingId = parseInt(req.params.bookingId || req.params.id, 10);
+    const invoice = await invoiceService.getByBooking(bookingId, req.user);
     return apiResponse.success(res, invoice, 'Booking invoice retrieved');
   } catch (err) {
     next(err);

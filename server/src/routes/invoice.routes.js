@@ -11,6 +11,7 @@ router.get('/my-invoices', verifyToken, authorize(ROLES.CUSTOMER), invoiceContro
 
 // Booking invoice
 router.get('/bookings/:id/invoice', verifyToken, invoiceController.getByBooking);
+router.get('/booking/:bookingId', verifyToken, invoiceController.getByBooking);
 
 // Invoice by ID
 router.get('/invoices/:id(\\d+)', verifyToken, invoiceController.getById);

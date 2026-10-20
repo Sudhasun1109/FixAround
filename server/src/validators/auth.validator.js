@@ -78,7 +78,20 @@ const loginValidation = [
     .withMessage('Password is required')
 ];
 
+const googleLoginValidation = [
+  body('credential')
+    .notEmpty()
+    .withMessage('Google credential token is required')
+    .isString()
+    .withMessage('Credential must be a valid token string'),
+  body('role')
+    .optional()
+    .isIn([ROLES.CUSTOMER, ROLES.TECHNICIAN])
+    .withMessage(`Role must be either '${ROLES.CUSTOMER}' or '${ROLES.TECHNICIAN}'`)
+];
+
 module.exports = {
   registerValidation,
-  loginValidation
+  loginValidation,
+  googleLoginValidation
 };

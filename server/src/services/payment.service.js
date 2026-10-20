@@ -11,6 +11,23 @@ const { generatePaymentNumber, generateInvoiceNumber } = require('../utils/helpe
 const { BOOKING_STATUSES, PAYMENT_STATUSES } = require('../utils/constants');
 const { pool } = require('../config/database');
 
+
+const Stripe = require('stripe');
+
+let stripeClient;
+
+function getStripeClient() {
+  if (!config.payment.stripeSecretKey) {
+    throw new Error('STRIPE_SECRET_KEY is not configured');
+  }
+
+  if (!stripeClient) {
+    stripeClient = new Stripe(config.payment.stripeSecretKey);
+  }
+
+  return stripeClient;
+}
+
 /**
  * Initiate payment for a booking
  * @param {number} bookingId
@@ -52,7 +69,8 @@ async function initiate(bookingId, customerId, method = 'ONLINE', customAmount =
     is_sandbox: isSandbox ? 1 : 0
   });
 
-  return {
+  const paymentObj = {
+    id: paymentId,
     paymentId,
     paymentNumber,
     amount: amount.toFixed(2),
@@ -61,7 +79,145 @@ async function initiate(bookingId, customerId, method = 'ONLINE', customAmount =
     currency: 'INR',
     bookingNumber: booking.booking_number
   };
+
+  return {
+    ...paymentObj,
+    payment: paymentObj
+  };
 }
+
+/**
+ * Create Stripe Checkout Session for a booking
+ */
+async function createStripeCheckout(bookingId, customerId) {
+  const stripe = getStripeClient();
+
+  const booking = await bookingRepo.findById(bookingId);
+
+  if (!booking) {
+    throw AppError.notFound('Booking not found');
+  }
+
+  if (Number(booking.customer_id) !== Number(customerId)) {
+    throw AppError.forbidden(
+      'You are not authorized to pay for this booking'
+    );
+  }
+
+  const amount = Number(
+    booking.final_total || booking.estimated_total || 0
+  );
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw AppError.badRequest(
+      'Payment amount must be greater than zero'
+    );
+  }
+
+  const amountInPaise = Math.round(amount * 100);
+
+  if (amountInPaise < 1) {
+    throw AppError.badRequest('Invalid payment amount');
+  }
+
+  const paymentNumber = generatePaymentNumber();
+
+  const paymentId = await paymentRepo.create({
+    payment_number: paymentNumber,
+    booking_id: bookingId,
+    customer_id: customerId,
+    amount: amount.toFixed(2),
+    payment_method: 'STRIPE',
+    status: PAYMENT_STATUSES.INITIATED,
+    is_sandbox: config.env !== 'production' ? 1 : 0
+  });
+
+  try {
+    const clientUrl = config.clientUrl;
+
+    if (!clientUrl) {
+      throw new Error('Client URL is not configured');
+    }
+
+    const baseUrl = clientUrl.replace(/\/$/, '');
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+
+      line_items: [
+        {
+          price_data: {
+            currency: 'inr',
+            product_data: {
+              name: booking.title || 'FixAround Service Booking',
+              description: `Booking #${booking.booking_number || bookingId}`
+            },
+            unit_amount: amountInPaise
+          },
+          quantity: 1
+        }
+      ],
+
+      client_reference_id: String(paymentId),
+
+      metadata: {
+        paymentId: String(paymentId),
+        paymentNumber: String(paymentNumber),
+        bookingId: String(bookingId),
+        customerId: String(customerId)
+      },
+
+      payment_intent_data: {
+        metadata: {
+          paymentId: String(paymentId),
+          bookingId: String(bookingId)
+        }
+      },
+
+      success_url:
+        `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+
+      cancel_url:
+        `${baseUrl}/payment/cancel?payment_id=${encodeURIComponent(String(paymentId))}`
+    });
+
+    await paymentRepo.updateStatus(
+      paymentId,
+      PAYMENT_STATUSES.INITIATED,
+      {
+        gateway_order_id: session.id,
+        gateway_response: {
+          gateway: 'stripe',
+          checkout_session_id: session.id
+        }
+      }
+    );
+
+    return {
+      paymentId,
+      paymentNumber,
+      bookingId,
+      amount: amount.toFixed(2),
+      currency: 'INR',
+      checkoutUrl: session.url,
+      sessionId: session.id
+    };
+  } catch (error) {
+    console.error(
+      `[Stripe Checkout Error] paymentId ${paymentId}:`,
+      error.message
+    );
+
+    throw error;
+  }
+}
+
+/**
+ * Handle payment gateway webhook
+ * @param {Object} payload
+ * @param {string} signature
+ */
 
 /**
  * Verify / Simulate sandbox payment in development mode
@@ -70,40 +226,55 @@ async function initiate(bookingId, customerId, method = 'ONLINE', customAmount =
  */
 async function verifySandboxPayment(paymentId, customerId) {
   const payment = await paymentRepo.findById(paymentId);
+
   if (!payment) {
     throw AppError.notFound('Payment record not found');
   }
 
-  if (payment.customer_id !== customerId) {
-    throw AppError.forbidden('You are not authorized to verify this payment');
+  if (Number(payment.customer_id) !== Number(customerId)) {
+    throw AppError.forbidden(
+      'You are not authorized to verify this payment'
+    );
   }
 
   if (payment.status === PAYMENT_STATUSES.SUCCESS) {
-    return { payment, message: 'Payment is already marked as successful' };
+    return {
+      payment,
+      message: 'Payment is already marked as successful'
+    };
   }
 
-  const gatewayPaymentId = `sb_pay_${crypto.randomBytes(8).toString('hex')}`;
-  const gatewayOrderId = `sb_ord_${crypto.randomBytes(8).toString('hex')}`;
+  const gatewayPaymentId =
+    `sb_pay_${crypto.randomBytes(8).toString('hex')}`;
 
-  await paymentRepo.updateStatus(paymentId, PAYMENT_STATUSES.SUCCESS, {
-    gateway_payment_id: gatewayPaymentId,
-    gateway_order_id: gatewayOrderId,
-    gateway_signature: 'sandbox_signature_verified',
-    gateway_response: { status: 'captured', method: payment.payment_method, sandbox: true }
-  });
+  const gatewayOrderId =
+    `sb_ord_${crypto.randomBytes(8).toString('hex')}`;
 
-  // Process success actions: invoice, earnings, booking update
+  await paymentRepo.updateStatus(
+    paymentId,
+    PAYMENT_STATUSES.SUCCESS,
+    {
+      gateway_payment_id: gatewayPaymentId,
+      gateway_order_id: gatewayOrderId,
+      gateway_signature: 'sandbox_signature_verified',
+      gateway_response: {
+        status: 'captured',
+        method: payment.payment_method,
+        sandbox: true
+      }
+    }
+  );
+
   await processPaymentSuccess(paymentId);
 
   const updatedPayment = await paymentRepo.findById(paymentId);
-  return { payment: updatedPayment, message: 'Sandbox payment verified successfully' };
+
+  return {
+    payment: updatedPayment,
+    message: 'Sandbox payment verified successfully'
+  };
 }
 
-/**
- * Handle payment gateway webhook
- * @param {Object} payload
- * @param {string} signature
- */
 async function handleWebhook(payload, signature) {
   // Validate signature if secret provided
   if (config.payment.stripeWebhookSecret && signature) {

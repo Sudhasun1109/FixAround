@@ -48,6 +48,10 @@ const config = {
     apiKey: process.env.MAPS_API_KEY || ''
   },
 
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || ''
+  },
+
   payment: {
     razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
     razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || '',

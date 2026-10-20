@@ -12,9 +12,10 @@ const router = Router();
 router.get('/my-reviews', verifyToken, reviewController.getMyReviews);
 
 // Technician reviews
+router.get('/technician/:id', reviewController.getTechnicianReviews);
 router.get('/technicians/:id/reviews', reviewController.getTechnicianReviews);
 
-// Booking reviews
+// Booking reviews & direct review creation
 router.post(
   '/bookings/:id/reviews',
   verifyToken,
@@ -22,6 +23,17 @@ router.post(
   validate(createReviewValidation),
   reviewController.create
 );
+
+router.post(
+  '/',
+  verifyToken,
+  authorize(ROLES.CUSTOMER),
+  validate(createReviewValidation),
+  reviewController.create
+);
+
+router.put('/:id', verifyToken, authorize(ROLES.CUSTOMER), reviewController.update);
+router.delete('/:id', verifyToken, reviewController.deleteReview);
 
 // Admin all reviews
 router.get('/reviews', verifyToken, authorize(ROLES.ADMIN), reviewController.getAll);

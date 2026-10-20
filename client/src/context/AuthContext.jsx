@@ -80,6 +80,22 @@ export function AuthProvider({ children }) {
     return { user: userData, token: tokenVal };
   };
 
+  const googleLogin = async (credential, role = 'customer') => {
+    const res = await authApi.googleLogin({ credential, role });
+    const tokenVal = res.data?.token || res.token;
+    const userData = res.data?.user || res.data || res.user;
+
+    if (tokenVal) {
+      localStorage.setItem('fixaround_token', tokenVal);
+      setToken(tokenVal);
+    }
+    if (userData) {
+      localStorage.setItem('fixaround_user', JSON.stringify(userData));
+      setUser(userData);
+    }
+    return { user: userData, token: tokenVal };
+  };
+
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
@@ -115,6 +131,7 @@ export function AuthProvider({ children }) {
     loading,
     isAuthenticated: Boolean(user && token),
     login,
+    googleLogin,
     register,
     logout,
     updateUser,

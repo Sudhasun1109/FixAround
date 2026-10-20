@@ -324,7 +324,7 @@ export default function BookingMonitoring() {
               >
                 <option value="">Choose certified technician</option>
                 {technicians.map((t) => (
-                  <option key={t.id || t.user_id} value={t.id || t.user_id}>
+                  <option key={t.user_id || t.id} value={t.user_id || t.id}>
                     {t.full_name || `${t.first_name || ''} ${t.last_name || ''}`} ({t.service_city || 'Delhi'} &bull; {t.completed_jobs || 0} jobs)
                   </option>
                 ))}

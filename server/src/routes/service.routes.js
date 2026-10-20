@@ -10,6 +10,7 @@ const router = Router();
 
 router.get('/', serviceController.getAll);
 router.get('/stats', serviceController.getWithStats);
+router.get('/slug/:slug', serviceController.getById);
 router.get('/:id', serviceController.getById);
 
 router.post(
@@ -33,6 +34,13 @@ router.patch(
   verifyToken,
   authorize(ROLES.ADMIN),
   serviceController.updateStatus
+);
+
+router.delete(
+  '/:id',
+  verifyToken,
+  authorize(ROLES.ADMIN),
+  serviceController.deleteCategory
 );
 
 module.exports = router;

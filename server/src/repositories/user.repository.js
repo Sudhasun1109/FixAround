@@ -40,6 +40,26 @@ async function findById(id, conn = pool) {
 }
 
 /**
+ * Find user by Google ID
+ * @param {string} googleId
+ * @param {Object} [conn=pool]
+ */
+async function findByGoogleId(googleId, conn = pool) {
+  const [rows] = await conn.query(
+    `SELECT u.*, 
+            cp.default_address_id, cp.preferred_language,
+            tp.id AS technician_profile_id, tp.verification_status, tp.is_available, tp.is_online,
+            tp.avg_rating, tp.completed_jobs, tp.service_city
+     FROM users u
+     LEFT JOIN customer_profiles cp ON cp.user_id = u.id
+     LEFT JOIN technician_profiles tp ON tp.user_id = u.id
+     WHERE u.google_id = ? LIMIT 1`,
+    [googleId]
+  );
+  return rows[0] || null;
+}
+
+/**
  * Create a new user record
  * @param {Object} userData
  * @param {Object} [conn=pool]
@@ -54,12 +74,14 @@ async function create(userData, conn = pool) {
     role = 'customer',
     is_active = 1,
     email_verified = 0,
-    avatar_url = null
+    avatar_url = null,
+    google_id = null,
+    auth_provider = 'local'
   } = userData;
 
   const [result] = await conn.query(
-    `INSERT INTO users (email, phone, password_hash, first_name, last_name, role, is_active, email_verified, avatar_url)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO users (email, phone, password_hash, first_name, last_name, role, is_active, email_verified, avatar_url, google_id, auth_provider)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       email.toLowerCase(),
       phone,
@@ -69,7 +91,9 @@ async function create(userData, conn = pool) {
       role,
       is_active ? 1 : 0,
       email_verified ? 1 : 0,
-      avatar_url
+      avatar_url,
+      google_id,
+      auth_provider
     ]
   );
 
@@ -85,7 +109,8 @@ async function create(userData, conn = pool) {
 async function update(id, fields, conn = pool) {
   const allowed = [
     'email', 'phone', 'first_name', 'last_name',
-    'password_hash', 'avatar_url', 'is_active', 'email_verified'
+    'password_hash', 'avatar_url', 'is_active', 'email_verified',
+    'google_id', 'auth_provider'
   ];
   const setClauses = [];
   const values = [];
@@ -205,6 +230,7 @@ async function deactivate(id, conn = pool) {
 module.exports = {
   findByEmail,
   findById,
+  findByGoogleId,
   create,
   update,
   findAll,

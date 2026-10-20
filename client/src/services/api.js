@@ -50,6 +50,7 @@ api.interceptors.response.use(
 export const authApi = {
   register: (data) => api.post('/auth/register', data),
   login: (credentials) => api.post('/auth/login', credentials),
+  googleLogin: (data) => api.post('/auth/google', data),
   getMe: () => api.get('/auth/me'),
   logout: () => {
     localStorage.removeItem('fixaround_token');

@@ -23,10 +23,13 @@ CREATE TABLE users (
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   email_verified TINYINT(1) NOT NULL DEFAULT 0,
   avatar_url VARCHAR(500) DEFAULT NULL,
+  google_id VARCHAR(100) DEFAULT NULL,
+  auth_provider VARCHAR(50) NOT NULL DEFAULT 'local',
   last_login_at DATETIME DEFAULT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_users_email (email),
+  UNIQUE KEY uq_users_google_id (google_id),
   INDEX idx_users_role (role),
   INDEX idx_users_active (is_active)
 ) ENGINE=InnoDB;

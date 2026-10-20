@@ -26,7 +26,7 @@ const swaggerOptions = {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
-          description: 'Enter your JWT token: Bearer <token>'
+          description: 'Paste your raw JWT token here without typing "Bearer " (Swagger UI automatically prepends it).'
         }
       }
     },

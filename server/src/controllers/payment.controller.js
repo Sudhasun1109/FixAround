@@ -3,7 +3,7 @@ const apiResponse = require('../utils/apiResponse');
 
 async function initiate(req, res, next) {
   try {
-    const bookingId = parseInt(req.params.id, 10);
+    const bookingId = parseInt(req.params.id || req.body.booking_id, 10);
     const { payment_method, amount } = req.body;
     const result = await paymentService.initiate(bookingId, req.user.id, payment_method, amount);
     return apiResponse.success(res, result, 'Payment initiated', 201);
@@ -14,7 +14,7 @@ async function initiate(req, res, next) {
 
 async function getByBooking(req, res, next) {
   try {
-    const bookingId = parseInt(req.params.id, 10);
+    const bookingId = parseInt(req.params.bookingId || req.params.id, 10);
     const payments = await paymentService.getByBooking(bookingId);
     return apiResponse.success(res, payments, 'Payments retrieved for booking');
   } catch (err) {
@@ -24,7 +24,7 @@ async function getByBooking(req, res, next) {
 
 async function verify(req, res, next) {
   try {
-    const paymentId = parseInt(req.params.id, 10);
+    const paymentId = parseInt(req.params.id || req.body.payment_id, 10);
     const result = await paymentService.verifySandboxPayment(paymentId, req.user.id);
     return apiResponse.success(res, result.payment, result.message);
   } catch (err) {

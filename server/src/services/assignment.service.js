@@ -175,22 +175,20 @@ async function handleAcceptance(bookingId, technicianUserId) {
       [bookingId, technicianUserId]
     );
 
-    if (assignments.length === 0) {
-      throw AppError.badRequest('No pending assignment found for you on this booking');
-    }
+    const assignment = assignments[0] || null;
 
-    const assignment = assignments[0];
-
-    // Check if deadline passed
-    const now = new Date();
-    const deadlineDate = new Date(assignment.deadline);
-    if (now > deadlineDate) {
-      await conn.query(
-        `UPDATE booking_assignments SET status = 'EXPIRED' WHERE id = ?`,
-        [assignment.id]
-      );
-      await conn.commit();
-      throw AppError.badRequest('The response deadline for this assignment has expired');
+    if (assignment && assignment.deadline) {
+      // Check if deadline passed
+      const now = new Date();
+      const deadlineDate = new Date(assignment.deadline);
+      if (now > deadlineDate) {
+        await conn.query(
+          `UPDATE booking_assignments SET status = 'EXPIRED' WHERE id = ?`,
+          [assignment.id]
+        );
+        await conn.commit();
+        throw AppError.badRequest('The response deadline for this assignment has expired');
+      }
     }
 
     // Lock booking for update
@@ -199,18 +197,27 @@ async function handleAcceptance(bookingId, technicianUserId) {
       [bookingId]
     );
     const booking = bookingRows[0];
+    if (!booking) {
+      throw AppError.notFound('Booking not found');
+    }
+
+    if (!assignment && booking.technician_id !== technicianUserId) {
+      throw AppError.badRequest('No pending assignment found for you on this booking');
+    }
 
     if (booking.status !== BOOKING_STATUSES.ASSIGNED && booking.status !== BOOKING_STATUSES.REQUESTED) {
       throw AppError.badRequest(`Booking is no longer in assignable state (current: ${booking.status})`);
     }
 
     // Mark assignment accepted
-    await conn.query(
-      `UPDATE booking_assignments 
-       SET status = 'ACCEPTED', responded_at = UTC_TIMESTAMP() 
-       WHERE id = ?`,
-      [assignment.id]
-    );
+    if (assignment) {
+      await conn.query(
+        `UPDATE booking_assignments 
+         SET status = 'ACCEPTED', responded_at = UTC_TIMESTAMP() 
+         WHERE id = ?`,
+        [assignment.id]
+      );
+    }
 
     // Update booking to ACCEPTED
     await conn.query(
@@ -266,18 +273,29 @@ async function handleRejection(bookingId, technicianUserId, reason = 'Technician
       [bookingId, technicianUserId]
     );
 
-    if (assignments.length === 0) {
+    const assignment = assignments[0] || null;
+
+    const [bookingRows] = await conn.query(
+      `SELECT * FROM bookings WHERE id = ? FOR UPDATE`,
+      [bookingId]
+    );
+    const booking = bookingRows[0];
+    if (!booking) {
+      throw AppError.notFound('Booking not found');
+    }
+
+    if (!assignment && booking.technician_id !== technicianUserId) {
       throw AppError.badRequest('No pending assignment found for you on this booking');
     }
 
-    const assignment = assignments[0];
-
-    await conn.query(
-      `UPDATE booking_assignments 
-       SET status = 'REJECTED', responded_at = UTC_TIMESTAMP(), rejection_reason = ? 
-       WHERE id = ?`,
-      [reason, assignment.id]
-    );
+    if (assignment) {
+      await conn.query(
+        `UPDATE booking_assignments 
+         SET status = 'REJECTED', responded_at = UTC_TIMESTAMP(), rejection_reason = ? 
+         WHERE id = ?`,
+        [reason, assignment.id]
+      );
+    }
 
     await conn.query(
       `UPDATE bookings SET status = 'REJECTED' WHERE id = ?`,
@@ -368,10 +386,91 @@ async function getAssignmentHistory(bookingId) {
   return await assignmentRepo.findByBookingId(bookingId);
 }
 
+/**
+ * Get active incoming dispatch offers for technician
+ * @param {number} technicianUserId
+ */
+async function getIncomingRequests(technicianUserId) {
+  return await assignmentRepo.getIncomingForTechnician(technicianUserId);
+}
+
+/**
+ * Manually assign a technician to a booking (Admin intervention)
+ * @param {number} bookingId
+ * @param {number} technicianUserId
+ * @param {number} [attemptNumber=1]
+ */
+async function createAssignment(bookingId, technicianUserId, attemptNumber = 1) {
+  const booking = await bookingRepo.findById(bookingId);
+  if (!booking) {
+    throw AppError.notFound('Booking not found');
+  }
+
+  const timeoutSeconds = (await settingsRepo.get('technician_response_timeout_seconds')) || config.platform.technicianResponseTimeoutSeconds;
+  const deadline = new Date(Date.now() + timeoutSeconds * 1000)
+    .toISOString()
+    .slice(0, 19)
+    .replace('T', ' ');
+
+  const conn = await pool.getConnection();
+  let assignmentId;
+  try {
+    await conn.beginTransaction();
+
+    // Expire any existing pending assignments for this booking
+    await conn.query(
+      `UPDATE booking_assignments SET status = 'EXPIRED' WHERE booking_id = ? AND status = 'PENDING'`,
+      [bookingId]
+    );
+
+    assignmentId = await assignmentRepo.create({
+      booking_id: bookingId,
+      technician_id: technicianUserId,
+      attempt_number: attemptNumber,
+      status: ASSIGNMENT_STATUSES.PENDING,
+      deadline
+    }, conn);
+
+    await bookingRepo.updateTechnician(bookingId, technicianUserId, BOOKING_STATUSES.ASSIGNED, conn);
+
+    await bookingRepo.addStatusHistory({
+      booking_id: bookingId,
+      from_status: booking.status,
+      to_status: BOOKING_STATUSES.ASSIGNED,
+      actor_role: 'admin',
+      notes: `Admin manually assigned technician (User ID #${technicianUserId})`
+    }, conn);
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+
+  // Send assignment alert notification to technician
+  await notificationRepo.create({
+    user_id: technicianUserId,
+    type: 'NEW_BOOKING_ASSIGNMENT',
+    title: booking.is_emergency ? '🚨 Emergency Service Offer' : 'New Service Offer',
+    message: `You have been assigned a new service request: "${booking.title}". Please respond within ${Math.round(timeoutSeconds / 60)} minutes.`,
+    data: {
+      bookingId,
+      assignmentId,
+      deadline
+    }
+  });
+
+  return { assignmentId, technicianId: technicianUserId, deadline };
+}
+
 module.exports = {
   assignNextTechnician,
+  createAssignment,
   handleAcceptance,
   handleRejection,
   processExpiredAssignments,
-  getAssignmentHistory
+  getAssignmentHistory,
+  getIncomingRequests
 };

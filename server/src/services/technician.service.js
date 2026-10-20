@@ -179,6 +179,53 @@ async function updateSkills(userId, skillsList) {
   return await technicianRepo.getSkills(profile.id);
 }
 
+/**
+ * Get skills by technician profile or user ID
+ * @param {number} techId
+ */
+async function getSkillsByTechnicianId(techId) {
+  let profile = await technicianRepo.findById(techId);
+  if (!profile) {
+    profile = await technicianRepo.findByUserId(techId);
+  }
+  if (!profile) return [];
+  return await technicianRepo.getSkills(profile.id);
+}
+
+/**
+ * Upload verification document metadata
+ * @param {number} userId
+ * @param {Object} docData
+ */
+async function uploadDocument(userId, { document_type, document_name, file_url, file_path }) {
+  const profile = await technicianRepo.findByUserId(userId);
+  if (!profile) {
+    throw AppError.notFound('Technician profile not found');
+  }
+  const [result] = await pool.query(
+    `INSERT INTO technician_documents (technician_id, document_type, document_name, file_url, file_path, status)
+     VALUES (?, ?, ?, ?, ?, 'PENDING')`,
+    [profile.id, document_type || 'ID_PROOF', document_name, file_url || null, file_path || null]
+  );
+  return { id: result.insertId, document_type, document_name, file_url, status: 'PENDING' };
+}
+
+/**
+ * Get uploaded documents for technician
+ * @param {number} userId
+ */
+async function getDocuments(userId) {
+  const profile = await technicianRepo.findByUserId(userId);
+  if (!profile) {
+    throw AppError.notFound('Technician profile not found');
+  }
+  const [rows] = await pool.query(
+    `SELECT * FROM technician_documents WHERE technician_id = ? ORDER BY created_at DESC`,
+    [profile.id]
+  );
+  return rows;
+}
+
 module.exports = {
   getProfile,
   getById,
@@ -188,5 +235,8 @@ module.exports = {
   verify,
   getAll,
   getStats,
-  updateSkills
+  updateSkills,
+  getSkillsByTechnicianId,
+  uploadDocument,
+  getDocuments
 };

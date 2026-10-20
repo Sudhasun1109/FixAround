@@ -280,4 +280,46 @@ describe('Auth API', () => {
       expect(res.statusCode).toBe(403);
     });
   });
+
+  // ==================== GOOGLE OAUTH ====================
+
+  describe('POST /api/v1/auth/google', () => {
+    const jwt = require('jsonwebtoken');
+
+    it('should authenticate and create user with valid Google credential', async () => {
+      const email = `test_google_${Date.now()}@example.com`;
+      const googleToken = jwt.sign(
+        {
+          sub: `google_id_${Date.now()}`,
+          email,
+          given_name: 'Google',
+          family_name: 'Tester',
+          email_verified: true
+        },
+        'test-secret'
+      );
+
+      const res = await request(app)
+        .post('/api/v1/auth/google')
+        .send({
+          credential: googleToken,
+          role: 'customer'
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty('token');
+      expect(res.body.data).toHaveProperty('user');
+      expect(res.body.data.user.email).toBe(email);
+    });
+
+    it('should reject request missing credential', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/google')
+        .send({});
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.success).toBe(false);
+    });
+  });
 });

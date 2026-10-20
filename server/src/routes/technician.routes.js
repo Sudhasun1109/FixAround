@@ -33,7 +33,13 @@ router.put(
 router.patch('/availability', verifyToken, authorize(ROLES.TECHNICIAN), technicianController.setAvailability);
 router.post('/availability', verifyToken, authorize(ROLES.TECHNICIAN), technicianController.setAvailability);
 
+router.post('/location', verifyToken, authorize(ROLES.TECHNICIAN), technicianController.updateLocation);
+
 router.put('/skills', verifyToken, authorize(ROLES.TECHNICIAN), technicianController.updateSkills);
+router.get('/:id/skills', technicianController.getSkills);
+
+router.post('/documents', verifyToken, authorize(ROLES.TECHNICIAN), technicianController.uploadDocument);
+router.get('/documents', verifyToken, authorize(ROLES.TECHNICIAN), technicianController.getDocuments);
 
 router.get('/:id/reviews', technicianController.getTechnicianReviews);
 

@@ -9,7 +9,7 @@ import { LogIn, Lock, Mail, Wrench, ShieldCheck, User } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -19,6 +19,18 @@ export default function Login() {
   const [error, setError] = useState('');
 
   const from = location.state?.from?.pathname || null;
+
+  const handleRedirect = (user) => {
+    if (from) {
+      navigate(from, { replace: true });
+    } else if (user.role === ROLES.ADMIN) {
+      navigate('/admin/dashboard', { replace: true });
+    } else if (user.role === ROLES.TECHNICIAN) {
+      navigate('/technician/dashboard', { replace: true });
+    } else {
+      navigate('/customer/dashboard', { replace: true });
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,17 +44,7 @@ export default function Login() {
       setError('');
       const { user } = await login({ email, password });
       showToast.success(`Welcome back, ${user.first_name || 'User'}!`);
-
-      // Determine redirect path
-      if (from) {
-        navigate(from, { replace: true });
-      } else if (user.role === ROLES.ADMIN) {
-        navigate('/admin/dashboard', { replace: true });
-      } else if (user.role === ROLES.TECHNICIAN) {
-        navigate('/technician/dashboard', { replace: true });
-      } else {
-        navigate('/customer/dashboard', { replace: true });
-      }
+      handleRedirect(user);
     } catch (err) {
       const msg = err.message || 'Invalid email or password';
       setError(msg);
@@ -50,6 +52,32 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (!credentialResponse?.credential) {
+      setError('Google did not provide a valid login credential');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+      const { user } = await googleLogin(credentialResponse.credential, ROLES.CUSTOMER);
+      showToast.success(`Welcome, ${user.first_name || 'User'}! Signed in with Google.`);
+      handleRedirect(user);
+    } catch (err) {
+      const msg = err.message || 'Google sign-in failed. Please try again.';
+      setError(msg);
+      showToast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError('Google sign-in was cancelled or encountered an error.');
+    showToast.error('Google sign-in failed');
   };
 
   // Quick fill helper for testers
@@ -121,9 +149,31 @@ export default function Login() {
               >
                 Sign In
               </Button>
-             
             </div>
-             <GoogleLogin onSuccess={credentialResponse => { console.log(credentialResponse); }} onError={() => { console.log('Login Failed'); }} ></GoogleLogin>
+
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-3 text-slate-400 font-semibold tracking-wider">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-center w-full">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                useOneTap={false}
+                shape="rectangular"
+                theme="outline"
+                size="large"
+                width="100%"
+                text="continue_with"
+              />
+            </div>
 
           </form>
           
