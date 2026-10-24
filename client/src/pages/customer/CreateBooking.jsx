@@ -61,8 +61,11 @@ export default function CreateBooking() {
         // Load states dynamically from API
         try {
           const statesRes = await servicesApi.getStates();
-          const list = statesRes?.data?.states || statesRes?.data || [];
-          if (Array.isArray(list) && list.length > 0) {
+          const rawList = statesRes?.data?.states || statesRes?.data || [];
+          const list = Array.isArray(rawList)
+            ? rawList.map((item) => (typeof item === 'object' && item !== null ? item.name || item.code : String(item)))
+            : [];
+          if (list.length > 0) {
             setStatesList(list);
             if (!state) setState(list[0]);
           }
@@ -403,11 +406,15 @@ export default function CreateBooking() {
                     required
                   >
                     {statesList.length > 0 ? (
-                      statesList.map((st) => (
-                        <option key={st} value={st}>
-                          {st}
-                        </option>
-                      ))
+                      statesList.map((st) => {
+                        const val = typeof st === 'object' && st !== null ? st.name || st.code : String(st);
+                        const label = typeof st === 'object' && st !== null ? st.name || st.code : String(st);
+                        return (
+                          <option key={val} value={val}>
+                            {label}
+                          </option>
+                        );
+                      })
                     ) : (
                       <>
                         <option value="Delhi">Delhi</option>

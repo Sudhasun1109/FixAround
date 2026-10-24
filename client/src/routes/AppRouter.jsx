@@ -154,6 +154,7 @@ export default function AppRouter() {
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/customers" element={<CustomerManagement />} />
           <Route path="/admin/technicians" element={<TechnicianVerification />} />
+          <Route path="/admin/technicians/verification" element={<TechnicianVerification />} />
           <Route path="/admin/categories" element={<CategoryManagement />} />
           <Route path="/admin/pricing" element={<PriceManagement />} />
           <Route path="/admin/bookings" element={<BookingMonitoring />} />

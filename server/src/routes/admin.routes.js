@@ -22,12 +22,16 @@ router.patch('/users/:id/status', adminController.updateUserStatus);
 router.get('/technicians/verification', adminController.getTechniciansForVerification);
 router.patch('/technicians/:id/verify', validate(verifyTechnicianValidation), technicianController.verify);
 router.post('/technicians/:id/verify', validate(verifyTechnicianValidation), technicianController.verify);
+router.post('/technicians/documents/:id/review', adminController.reviewDocument);
+router.patch('/technicians/documents/:id/review', adminController.reviewDocument);
 
 router.get('/bookings/emergency', adminController.getEmergencyBookings);
 router.get('/bookings', adminController.getBookings);
 router.post('/bookings/:id/reassign', adminController.reassignBooking);
 
 router.get('/payments', adminController.getPayments);
+router.get('/settlements', adminController.getSettlements);
+router.post('/settlements/:id/settle', adminController.settlePayout);
 
 router.get('/claims', adminController.getClaims);
 

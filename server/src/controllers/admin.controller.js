@@ -1,6 +1,7 @@
 const adminService = require('../services/admin.service');
 const userRepo = require('../repositories/user.repository');
 const technicianRepo = require('../repositories/technician.repository');
+const technicianService = require('../services/technician.service');
 const bookingService = require('../services/booking.service');
 const assignmentService = require('../services/assignment.service');
 const claimService = require('../services/claim.service');
@@ -191,19 +192,75 @@ async function getEmergencyBookings(req, res, next) {
 
 async function getTechniciansForVerification(req, res, next) {
   try {
-    const { page, limit, status, search } = req.query;
+    const { page, limit, status, verification_status, search } = req.query;
+    const filterStatus = verification_status || status;
+
     const result = await technicianRepo.findAll({
       page: parseInt(page || '1', 10),
       limit: parseInt(limit || '20', 10),
-      status: status || 'pending',
+      status: (!filterStatus || filterStatus === 'all') ? null : filterStatus,
       search
     });
+
+    if (result.technicians && result.technicians.length > 0) {
+      const techIds = result.technicians.map(t => t.id);
+
+      // 1. Fetch submitted documents for each technician
+      const [docs] = await pool.query(
+        `SELECT td.*, u.first_name AS reviewer_first_name, u.last_name AS reviewer_last_name
+         FROM technician_documents td
+         LEFT JOIN users u ON u.id = td.reviewed_by
+         WHERE td.technician_id IN (${techIds.map(() => '?').join(',')})
+         ORDER BY td.created_at DESC`,
+        techIds
+      );
+
+      // 2. Fetch skills for each technician
+      const [skills] = await pool.query(
+        `SELECT ts.technician_id, sc.name AS category_name, sc.slug AS category_slug, sc.icon, ts.years_experience
+         FROM technician_skills ts
+         JOIN service_categories sc ON sc.id = ts.category_id
+         WHERE ts.technician_id IN (${techIds.map(() => '?').join(',')})
+         ORDER BY sc.name ASC`,
+        techIds
+      );
+
+      const docsByTech = {};
+      docs.forEach(d => {
+        if (!docsByTech[d.technician_id]) docsByTech[d.technician_id] = [];
+        docsByTech[d.technician_id].push(d);
+      });
+
+      const skillsByTech = {};
+      skills.forEach(s => {
+        if (!skillsByTech[s.technician_id]) skillsByTech[s.technician_id] = [];
+        skillsByTech[s.technician_id].push(s);
+      });
+
+      result.technicians.forEach(t => {
+        t.documents = docsByTech[t.id] || [];
+        t.skills = skillsByTech[t.id] || [];
+        t.pending_documents_count = (docsByTech[t.id] || []).filter(d => d.status === 'PENDING').length;
+      });
+    }
+
     return apiResponse.paginated(
       res,
       result.technicians,
-      { page, limit, total: result.total },
+      { page: parseInt(page || '1', 10), limit: parseInt(limit || '20', 10), total: result.total },
       'Technicians for verification retrieved'
     );
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function reviewDocument(req, res, next) {
+  try {
+    const documentId = parseInt(req.params.id, 10);
+    const { status, notes } = req.body;
+    const result = await technicianService.reviewDocument(documentId, status, req.user.id, notes);
+    return apiResponse.success(res, result, `Document verification updated to ${status}`);
   } catch (err) {
     next(err);
   }
@@ -269,6 +326,44 @@ async function deleteReview(req, res, next) {
   }
 }
 
+async function getSettlements(req, res, next) {
+  try {
+    const earningsService = require('../services/earnings.service');
+    const { page, limit, status, search } = req.query;
+    const result = await earningsService.getAll({
+      page: parseInt(page || '1', 10),
+      limit: parseInt(limit || '20', 10),
+      settlementStatus: status,
+      search
+    });
+    return apiResponse.success(
+      res,
+      {
+        settlements: result.earnings,
+        summary: result.summary,
+        total: result.total,
+        page: parseInt(page || '1', 10),
+        limit: parseInt(limit || '20', 10)
+      },
+      'Settlements retrieved successfully'
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function settlePayout(req, res, next) {
+  try {
+    const earningsService = require('../services/earnings.service');
+    const earningId = parseInt(req.params.id, 10);
+    const { notes } = req.body;
+    const updated = await earningsService.settle(earningId, req.user.id, notes);
+    return apiResponse.success(res, updated, 'Technician payout successfully verified and settled');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboard,
   getUsers,
@@ -277,11 +372,14 @@ module.exports = {
   getBookings,
   getEmergencyBookings,
   getPayments,
+  getSettlements,
+  settlePayout,
   getSettings,
   updateSetting,
   getAuditLogs,
   reassignBooking,
   getTechniciansForVerification,
+  reviewDocument,
   getClaims,
   getReviews,
   toggleReviewVisibility,

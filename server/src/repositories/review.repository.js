@@ -179,6 +179,33 @@ async function updateVisibility(id, isVisible, adminNotes = null, conn = pool) {
   return result.affectedRows;
 }
 
+/**
+ * Get featured public reviews for landing page
+ * @param {number} limit
+ * @param {Object} [conn=pool]
+ */
+async function findFeatured(limit = 6, conn = pool) {
+  const [rows] = await conn.query(
+    `SELECT r.*,
+            c.first_name AS customer_first_name, c.last_name AS customer_last_name, c.avatar_url AS customer_avatar,
+            t.first_name AS technician_first_name, t.last_name AS technician_last_name,
+            s.name AS service_name
+     FROM reviews r
+     JOIN users c ON c.id = r.customer_id
+     JOIN users t ON t.id = r.technician_id
+     LEFT JOIN bookings b ON b.id = r.booking_id
+     LEFT JOIN service_categories s ON s.id = b.category_id
+     WHERE r.is_visible = 1 AND r.rating >= 4
+     ORDER BY r.rating DESC, r.created_at DESC
+     LIMIT ?`,
+    [Number(limit)]
+  );
+  return rows.map((r) => ({
+    ...r,
+    customer_name: `${r.customer_first_name || ''} ${r.customer_last_name ? r.customer_last_name[0] + '.' : ''}`.trim(),
+  }));
+}
+
 module.exports = {
   create,
   findByBookingId,
@@ -186,5 +213,6 @@ module.exports = {
   findByTechnicianId,
   findByCustomerId,
   findAll,
-  updateVisibility
+  updateVisibility,
+  findFeatured,
 };

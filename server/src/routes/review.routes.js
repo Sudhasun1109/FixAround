@@ -8,7 +8,10 @@ const { ROLES } = require('../utils/constants');
 
 const router = Router();
 
-// My reviews
+// Public featured reviews (no auth required)
+router.get('/featured', reviewController.getFeatured);
+
+// My reviews (requires auth)
 router.get('/my-reviews', verifyToken, reviewController.getMyReviews);
 
 // Technician reviews

@@ -1,9 +1,21 @@
 const estimateService = require('../services/estimate.service');
+const bookingRepo = require('../repositories/booking.repository');
 const apiResponse = require('../utils/apiResponse');
+
+async function resolveBookingId(rawId) {
+  if (!rawId) return null;
+  if (typeof rawId === 'string' && rawId.startsWith('BK-')) {
+    const b = await bookingRepo.findByBookingNumber(rawId);
+    return b ? b.id : null;
+  }
+  const parsed = parseInt(rawId, 10);
+  return isNaN(parsed) ? null : parsed;
+}
 
 async function create(req, res, next) {
   try {
-    const bookingId = parseInt(req.params.id || req.params.bookingId || req.body.booking_id || req.body.bookingId, 10);
+    const rawId = req.params.id || req.params.bookingId || req.body.booking_id || req.body.bookingId;
+    const bookingId = await resolveBookingId(rawId);
     const estimate = await estimateService.create(bookingId, req.user.id, req.body);
     return apiResponse.success(res, estimate, 'Price estimate submitted successfully', 201);
   } catch (err) {
@@ -13,7 +25,8 @@ async function create(req, res, next) {
 
 async function getByBooking(req, res, next) {
   try {
-    const bookingId = parseInt(req.params.id || req.params.bookingId, 10);
+    const rawId = req.params.id || req.params.bookingId;
+    const bookingId = await resolveBookingId(rawId);
     const estimates = await estimateService.getByBooking(bookingId);
     const latestEstimate = Array.isArray(estimates) && estimates.length > 0 ? estimates[0] : null;
     return apiResponse.success(res, {

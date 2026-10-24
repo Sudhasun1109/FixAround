@@ -46,15 +46,19 @@ export default function Earnings() {
     summary?.total_commission ||
     earnings.reduce((sum, item) => sum + Number(item.commission_amount || 0), 0);
 
-  const netPayout =
-    summary?.net_payout ||
-    earnings.reduce((sum, item) => sum + Number(item.net_amount || 0), 0);
+  const settledAmount =
+    summary?.settled_amount !== undefined
+      ? Number(summary.settled_amount)
+      : earnings
+          .filter((e) => e.settlement_status === 'SETTLED')
+          .reduce((sum, item) => sum + Number(item.net_amount || 0), 0);
 
   const pendingSettlement =
-    summary?.pending_settlement ||
-    earnings
-      .filter((e) => e.settlement_status === 'PENDING')
-      .reduce((sum, item) => sum + Number(item.net_amount || 0), 0);
+    summary?.pending_settlement !== undefined
+      ? Number(summary.pending_settlement)
+      : earnings
+          .filter((e) => e.settlement_status === 'PENDING')
+          .reduce((sum, item) => sum + Number(item.net_amount || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -66,7 +70,7 @@ export default function Earnings() {
           Earnings & Payout Settlements
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Detailed accounting of completed jobs, platform commission, and bank transfers.
+          Detailed accounting of completed jobs, platform commission, and payouts verified & released by Admin.
         </p>
       </div>
 
@@ -81,27 +85,27 @@ export default function Earnings() {
         />
 
         <StatsCard
-          label="Platform Commission"
+          label="Platform Commission (15%)"
           value={formatCurrency(totalCommission)}
           icon={DollarSign}
           color="purple"
-          subtitle="15% standard service fee"
+          subtitle="Platform service charge"
         />
 
         <StatsCard
-          label="Net Earnings"
-          value={formatCurrency(netPayout)}
-          icon={Wallet}
+          label="Settled & Received"
+          value={formatCurrency(settledAmount)}
+          icon={CheckCircle}
           color="green"
-          subtitle="Your earned share"
+          subtitle="Verified & released by Admin"
         />
 
         <StatsCard
-          label="Pending Transfer"
+          label="Pending Admin Release"
           value={formatCurrency(pendingSettlement)}
           icon={Clock}
           color="amber"
-          subtitle="Weekly direct bank deposit"
+          subtitle="Held until Admin verification"
         />
       </div>
 
@@ -154,13 +158,13 @@ export default function Earnings() {
                     </td>
                     <td className="py-3 px-4 text-center">
                       <span
-                        className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
                           e.settlement_status === 'SETTLED'
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-amber-100 text-amber-800'
                         }`}
                       >
-                        {e.settlement_status || 'PENDING'}
+                        {e.settlement_status === 'SETTLED' ? 'SETTLED (Received)' : 'HELD (Awaiting Admin Settle)'}
                       </span>
                     </td>
                   </tr>

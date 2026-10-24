@@ -61,8 +61,11 @@ export default function CustomerProfile() {
     const fetchStates = async () => {
       try {
         const res = await customerApi.getStates();
-        const list = res?.data?.states || res?.data || [];
-        if (Array.isArray(list) && list.length > 0) {
+        const rawList = res?.data?.states || res?.data || [];
+        const list = Array.isArray(rawList)
+          ? rawList.map((item) => (typeof item === 'object' && item !== null ? item.name || item.code : String(item)))
+          : [];
+        if (list.length > 0) {
           setStatesList(list);
           if (!addressForm.state) {
             setAddressForm((prev) => ({ ...prev, state: list[0] }));
@@ -545,11 +548,15 @@ export default function CustomerProfile() {
                 required
               >
                 {statesList.length > 0 ? (
-                  statesList.map((st) => (
-                    <option key={st} value={st}>
-                      {st}
-                    </option>
-                  ))
+                  statesList.map((st) => {
+                    const val = typeof st === 'object' && st !== null ? st.name || st.code : String(st);
+                    const label = typeof st === 'object' && st !== null ? st.name || st.code : String(st);
+                    return (
+                      <option key={val} value={val}>
+                        {label}
+                      </option>
+                    );
+                  })
                 ) : (
                   <>
                     <option value="Delhi">Delhi</option>

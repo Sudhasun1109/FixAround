@@ -42,7 +42,7 @@ export default function Home() {
       }
 
       try {
-        const revRes = await reviewsApi.getMyReviews({ limit: 3 });
+        const revRes = await reviewsApi.getFeatured({ limit: 3 });
         const revList = revRes?.data?.reviews || revRes?.data || [];
         if (Array.isArray(revList) && revList.length > 0) {
           setReviews(revList.slice(0, 3));

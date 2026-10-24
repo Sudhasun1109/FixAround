@@ -122,7 +122,25 @@ export default function InteractiveMap({
   }, [googleLoaded, defaultLat, defaultLng, zoom, markerTitle, markers, onLocationSelect, interactive]);
 
   // OpenStreetMap embed fallback
-  const osmEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${Number(defaultLng) - 0.01}%2C${Number(defaultLat) - 0.01}%2C${Number(defaultLng) + 0.01}%2C${Number(defaultLat) + 0.01}&layer=mapnik&marker=${defaultLat}%2C${defaultLng}`;
+  let minLat = Number(defaultLat);
+  let maxLat = Number(defaultLat);
+  let minLng = Number(defaultLng);
+  let maxLng = Number(defaultLng);
+
+  if (Array.isArray(markers) && markers.length > 0) {
+    markers.forEach((m) => {
+      if (m.lat && m.lng) {
+        minLat = Math.min(minLat, Number(m.lat));
+        maxLat = Math.max(maxLat, Number(m.lat));
+        minLng = Math.min(minLng, Number(m.lng));
+        maxLng = Math.max(maxLng, Number(m.lng));
+      }
+    });
+  }
+
+  const pad = 0.008;
+  const bbox = `${minLng - pad}%2C${minLat - pad}%2C${maxLng + pad}%2C${maxLat + pad}`;
+  const osmEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${defaultLat}%2C${defaultLng}`;
 
   return (
     <div className="relative w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 shadow-2xs">

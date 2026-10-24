@@ -410,13 +410,12 @@ async function processPaymentSuccess(paymentId) {
           notes: `Booking #${booking.booking_number} completed payment`
         }, conn);
 
-        // Update technician total_earnings & completed_jobs in technician_profiles
+        // Increment completed_jobs. Earnings remain PENDING until Admin verifies & settles
         await conn.query(
           `UPDATE technician_profiles 
-           SET total_earnings = total_earnings + ?,
-               completed_jobs = completed_jobs + 1
+           SET completed_jobs = completed_jobs + 1
            WHERE user_id = ?`,
-          [netTechnicianPayout.toFixed(2), booking.technician_id]
+          [booking.technician_id]
         );
       }
     }

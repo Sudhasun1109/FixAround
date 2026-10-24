@@ -1,5 +1,7 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../context/NotificationContext';
+import { useAuth } from '../../hooks/useAuth';
 import { formatRelativeTime } from '../../utils/formatters';
 import {
   Calendar,
@@ -9,6 +11,7 @@ import {
   FileText,
   Clock,
   ShieldAlert,
+  ShieldCheck,
   Bell,
 } from 'lucide-react';
 
@@ -20,6 +23,8 @@ const NOTIF_ICONS = {
   EMERGENCY: AlertTriangle,
   CLAIM: ShieldAlert,
   REVIEW: CheckCircle,
+  KYC: ShieldCheck,
+  VERIFICATION: ShieldCheck,
 };
 
 export default function NotificationList({
@@ -28,6 +33,8 @@ export default function NotificationList({
   className = '',
 }) {
   const { markRead } = useNotifications();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   if (!notifications || notifications.length === 0) {
     return (
@@ -53,6 +60,15 @@ export default function NotificationList({
     }
     if (onItemClick) {
       onItemClick(notif);
+    }
+
+    const typeUpper = (notif.type || '').toUpperCase();
+    if (typeUpper.includes('KYC') || typeUpper.includes('VERIFICATION')) {
+      if (user?.role === 'admin') {
+        navigate('/admin/technicians');
+      } else if (user?.role === 'technician') {
+        navigate('/technician/verification');
+      }
     }
   };
 

@@ -20,5 +20,7 @@ router.delete('/addresses/:id', customerController.deleteAddress);
 // Customer Wallet & Topup
 router.get('/wallet', customerController.getWallet);
 router.post('/wallet/topup', customerController.topupWallet);
+router.post('/wallet/razorpay/create-order', customerController.createWalletRazorpayOrder);
+router.post('/wallet/razorpay/verify', customerController.verifyWalletRazorpay);
 
 module.exports = router;

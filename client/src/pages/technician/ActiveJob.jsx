@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { bookingsApi, estimatesApi } from '../../services/api';
+import { bookingsApi, estimatesApi, techniciansApi } from '../../services/api';
 import BookingTimeline from '../../components/booking/BookingTimeline';
 import StatusBadge from '../../components/booking/StatusBadge';
 import Button from '../../components/common/Button';
@@ -75,6 +75,25 @@ export default function ActiveJob() {
   const handleTransition = async (nextStatus) => {
     try {
       setUpdating(true);
+
+      // Attempt to capture and broadcast technician's live GPS to customer tracking map
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            try {
+              await techniciansApi.updateLocation({
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+              });
+            } catch {
+              // Location sync is non-blocking
+            }
+          },
+          () => {},
+          { timeout: 5000, enableHighAccuracy: true }
+        );
+      }
+
       await bookingsApi.updateStatus(id, nextStatus, notes);
       showToast.success(`Job updated to: ${nextStatus.replace(/_/g, ' ')}`);
       fetchJob();

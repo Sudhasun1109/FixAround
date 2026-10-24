@@ -1,10 +1,18 @@
 const reviewService = require('../services/review.service');
+const bookingRepo = require('../repositories/booking.repository');
 const { pool } = require('../config/database');
 const apiResponse = require('../utils/apiResponse');
 
 async function create(req, res, next) {
   try {
-    const bookingId = parseInt(req.params.id || req.body.booking_id, 10);
+    const rawId = req.params.id || req.body.booking_id;
+    let bookingId = rawId;
+    if (typeof rawId === 'string' && rawId.startsWith('BK-')) {
+      const b = await bookingRepo.findByBookingNumber(rawId);
+      if (b) bookingId = b.id;
+    } else {
+      bookingId = parseInt(rawId, 10);
+    }
     const review = await reviewService.create(bookingId, req.user.id, req.body);
     return apiResponse.success(res, review, 'Review submitted successfully', 201);
   } catch (err) {
@@ -112,11 +120,22 @@ async function getAll(req, res, next) {
   }
 }
 
+async function getFeatured(req, res, next) {
+  try {
+    const limit = parseInt(req.query.limit || '6', 10);
+    const reviews = await reviewService.getFeatured(limit);
+    return apiResponse.success(res, { reviews }, 'Featured reviews retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   create,
   getTechnicianReviews,
   getMyReviews,
   update,
   deleteReview,
-  getAll
+  getAll,
+  getFeatured,
 };
