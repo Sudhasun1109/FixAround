@@ -1,15 +1,9 @@
-const { body, check } = require('express-validator');
+const { body, check, param } = require('express-validator');
 
 const createReviewValidation = [
-
-  param('id')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('Booking ID must be a positive integer'),
-
   check('booking_id')
     .custom((val, { req }) => {
-      const rawId = req.params?.id || req.body?.booking_id;
+      const rawId = req.params?.id || req.body?.booking_id || val;
       if (!rawId) {
         throw new Error('Booking ID is required');
       }
@@ -20,19 +14,6 @@ const createReviewValidation = [
       }
       return true;
     }),
-
-
-  body('booking_id')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('booking_id must be a positive integer'),
-
-  body().custom((value, { req }) => {
-    if (!req.params?.id && !req.body?.booking_id) {
-      throw new Error('Booking ID is required');
-    }
-    return true;
-  }),
 
   body('rating')
     .notEmpty()

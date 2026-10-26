@@ -45,9 +45,6 @@ export default function CustomerProfile() {
     label: 'Home',
     address_line1: '',
     address_line2: '',
-    city: 'Tiruppur',
-    state: 'Tamil Nadu',
-    pincode: '641601',
     city: 'New Delhi',
     state: 'Delhi',
     pincode: '110001',
@@ -589,8 +586,7 @@ export default function CustomerProfile() {
               value={addressForm.city}
               onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
             />
-            <Select label="State" required value={addressForm.state} onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })} options={INDIAN_STATES.map((s) => ({ value: s, label: s }))} />
-
+            
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                 State <span className="text-rose-500">*</span>
