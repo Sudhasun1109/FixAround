@@ -1,5 +1,45 @@
+const fs = require('fs');
 const mysql = require('mysql2/promise');
 const config = require('./env');
+
+/**
+ * Configure TLS/SSL options for MySQL / TiDB Cloud
+ * TiDB Cloud Serverless requires TLSv1.2 with public CA validation.
+ */
+function getSslConfig() {
+  const host = config.db.host || '';
+  const isTiDB = host.includes('tidbcloud.com') || Number(config.db.port) === 4000;
+  const sslRequested = process.env.DB_SSL === 'true' || process.env.TIDB_ENABLE_SSL === 'true';
+  const sslExplicitlyDisabled = process.env.DB_SSL === 'false' || process.env.TIDB_ENABLE_SSL === 'false';
+
+  // Do not enable SSL if explicitly disabled (e.g. local development MySQL on port 3306)
+  if (sslExplicitlyDisabled) {
+    return undefined;
+  }
+
+  // Enable secure TLS for TiDB Cloud or when explicitly requested
+  if (sslRequested || isTiDB) {
+    const sslOptions = {
+      minVersion: 'TLSv1.2',
+      // Strict certificate validation against Node.js built-in Mozilla root CA store
+      rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+    };
+
+    // Support optional custom CA certificate file (e.g. TiDB Cloud Dedicated clusters)
+    const caPath = process.env.DB_SSL_CA || process.env.TIDB_CA_PATH;
+    if (caPath) {
+      try {
+        sslOptions.ca = fs.readFileSync(caPath);
+      } catch (err) {
+        console.warn(`[Database] Warning: Could not read custom CA at ${caPath}: ${err.message}. Using system CA bundle.`);
+      }
+    }
+
+    return sslOptions;
+  }
+
+  return undefined;
+}
 
 const pool = mysql.createPool({
   host: config.db.host,
@@ -8,10 +48,8 @@ const pool = mysql.createPool({
   password: config.db.password,
   database: config.db.database,
 
-  // Enable TLS only if explicitly requested via DB_SSL=true
-  ssl: process.env.DB_SSL === 'true'
-    ? { minVersion: 'TLSv1.2', rejectUnauthorized: false }
-    : undefined,
+  // Secure TLS configuration compatible with TiDB Cloud Serverless & local MySQL
+  ssl: getSslConfig(),
 
   waitForConnections: config.db.waitForConnections,
   connectionLimit: config.db.connectionLimit,
