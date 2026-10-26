@@ -25,7 +25,7 @@ export default function Home() {
   const [reviews, setReviews] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCity, setSelectedCity] = useState('New Delhi');
+  const [selectedCity, setSelectedCity] = useState('Tiruppur');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -122,17 +122,7 @@ export default function Home() {
             >
               <div className="flex items-center gap-2 px-3 py-2 text-slate-500 border-b sm:border-b-0 sm:border-r border-slate-200 w-full sm:w-auto shrink-0">
                 <MapPin className="w-4 h-4 text-fixteal-600" />
-                <select
-                  value={selectedCity}
-                  onChange={(e) => setSelectedCity(e.target.value)}
-                  className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
-                >
-                  <option value="New Delhi">New Delhi</option>
-                  <option value="Noida">Noida</option>
-                  <option value="Gurugram">Gurugram</option>
-                  <option value="Bengaluru">Bengaluru</option>
-                  <option value="Mumbai">Mumbai</option>
-                </select>
+                <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"><option value="Tiruppur">Tiruppur, Tamil Nadu</option><option value="Chennai">Chennai, Tamil Nadu</option><option value="Coimbatore">Coimbatore, Tamil Nadu</option><option value="Bengaluru">Bengaluru, Karnataka</option><option value="New Delhi">New Delhi, Delhi</option><option value="Mumbai">Mumbai, Maharashtra</option></select>
               </div>
 
               <div className="flex-1 flex items-center px-3 py-2 w-full">
@@ -395,7 +385,7 @@ export default function Home() {
                 Request Emergency Tech Now
               </Link>
               <a
-                href="tel:18003492768"
+                href="tel:9597993402"
                 className="px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm text-center border border-white/30 flex items-center justify-center gap-2"
               >
                 <PhoneCall className="w-4 h-4" />

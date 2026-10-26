@@ -108,7 +108,7 @@ export default function ServiceDetail() {
           <div className="prose prose-slate max-w-none text-sm text-slate-600 leading-relaxed space-y-4">
             <p>{category.description}</p>
             <p>
-              All service requests for {category.name} include a rigorous multi-point inspection, clear pricing approval before commencement, genuine parts sourcing, and post-service warranty.
+              All service requests for {category.name} include a rigorous multi-point inspection, clear pricing approval before commencement, genuine parts sourcing, and doorstep quality assurance.
             </p>
           </div>
 
@@ -128,7 +128,7 @@ export default function ServiceDetail() {
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-white p-3 rounded-xl border border-slate-200">
               <CheckCircle className="w-4 h-4 text-fixteal-600 shrink-0" />
-              <span>{category.warranty_period_days || 7}-Day FixAround Warranty</span>
+              <span>FixAround Service Quality Guarantee</span>
             </div>
           </div>
         </div>

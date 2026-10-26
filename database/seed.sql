@@ -85,7 +85,8 @@ INSERT INTO addresses (id, user_id, label, address_line1, address_line2, city, s
 (1, 2, 'Home', '42 Rajouri Garden', 'Near Metro Station', 'New Delhi', 'Delhi', '110027', 28.6468, 77.1215, 1),
 (2, 2, 'Office', '15 Connaught Place', 'Block B, 3rd Floor', 'New Delhi', 'Delhi', '110001', 28.6315, 77.2167, 0),
 (3, 3, 'Home', '78 Lajpat Nagar', 'Main Market Road', 'New Delhi', 'Delhi', '110024', 28.5700, 77.2400, 1),
-(4, 4, 'Home', '23 Dwarka Sector 10', 'Near Community Centre', 'New Delhi', 'Delhi', '110075', 28.5823, 77.0500, 1);
+(4, 4, 'Home', '23 Dwarka Sector 10', 'Near Community Centre', 'New Delhi', 'Delhi', '110075', 28.5823, 77.0500, 1),
+(5, 2, 'Work', '15 Avinashi Road', 'Near New Bus Stand', 'Tiruppur', 'Tamil Nadu', '641602', 11.1085, 77.3411, 0);
 
 -- Update customer profiles with default address
 UPDATE customer_profiles SET default_address_id = 1 WHERE user_id = 2;

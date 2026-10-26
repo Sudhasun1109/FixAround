@@ -14,7 +14,6 @@ import {
   Edit2,
   CheckCircle,
   XCircle,
-  Shield,
   Tag,
 } from 'lucide-react';
 
@@ -33,7 +32,6 @@ export default function CategoryManagement() {
     min_price: '150',
     max_price: '5000',
     inspection_charge: '99',
-    warranty_period_days: '7',
     is_active: 1,
   });
   const [saving, setSaving] = useState(false);
@@ -66,7 +64,6 @@ export default function CategoryManagement() {
       min_price: '150',
       max_price: '5000',
       inspection_charge: '99',
-      warranty_period_days: '7',
       is_active: 1,
     });
     setIsModalOpen(true);
@@ -82,7 +79,6 @@ export default function CategoryManagement() {
       min_price: String(cat.min_price || 0),
       max_price: String(cat.max_price || 0),
       inspection_charge: String(cat.inspection_charge || 0),
-      warranty_period_days: String(cat.warranty_period_days || 7),
       is_active: cat.is_active ? 1 : 0,
     });
     setIsModalOpen(true);
@@ -116,7 +112,6 @@ export default function CategoryManagement() {
         min_price: parseFloat(formData.min_price) || 0,
         max_price: parseFloat(formData.max_price) || 0,
         inspection_charge: parseFloat(formData.inspection_charge) || 0,
-        warranty_period_days: parseInt(formData.warranty_period_days, 10) || 7,
         is_active: formData.is_active ? 1 : 0,
       };
 
@@ -148,7 +143,7 @@ export default function CategoryManagement() {
             Service Categories
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Configure service offerings, warranty windows, and indicative price bounds.
+            Configure service offerings, pricing bounds, and customer dispatch settings.
           </p>
         </div>
 
@@ -174,20 +169,19 @@ export default function CategoryManagement() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-400 font-bold uppercase tracking-wider">
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Slug</th>
-                  <th className="py-3 px-4">Price Range</th>
-                  <th className="py-3 px-4">Inspection</th>
-                  <th className="py-3 px-4">Warranty</th>
-                  <th className="py-3 px-4 text-center">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-500 font-bold uppercase tracking-wider">
+                  <th className="py-3.5 px-4">Category</th>
+                  <th className="py-3.5 px-4">Slug</th>
+                  <th className="py-3.5 px-4">Price Range</th>
+                  <th className="py-3.5 px-4">Inspection Fee</th>
+                  <th className="py-3.5 px-4 text-center">Status</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                 {categories.map((cat) => (
-                  <tr key={cat.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3 px-4">
+                  <tr key={cat.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2.5">
                         <span className="font-mono text-[10px] text-slate-400">#{cat.id}</span>
                         <div>
@@ -197,28 +191,25 @@ export default function CategoryManagement() {
                       </div>
                     </td>
 
-                    <td className="py-3 px-4 font-mono text-slate-500">
+                    <td className="py-3.5 px-4 font-mono text-slate-500">
                       {cat.slug}
                     </td>
 
-                    <td className="py-3 px-4 font-bold text-fixblue-900">
+                    <td className="py-3.5 px-4 font-bold text-fixblue-900">
                       {formatCurrency(cat.min_price)} – {formatCurrency(cat.max_price)}
                     </td>
 
-                    <td className="py-3 px-4">
-                      {Number(cat.inspection_charge) > 0 ? formatCurrency(cat.inspection_charge) : 'FREE'}
+                    <td className="py-3.5 px-4">
+                      {Number(cat.inspection_charge) > 0 ? (
+                        <span className="font-medium text-slate-700">{formatCurrency(cat.inspection_charge)}</span>
+                      ) : (
+                        <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE</span>
+                      )}
                     </td>
 
-                    <td className="py-3 px-4">
-                      <span className="inline-flex items-center gap-1 font-semibold text-emerald-700">
-                        <Shield className="w-3 h-3" />
-                        {cat.warranty_period_days} Days
-                      </span>
-                    </td>
-
-                    <td className="py-3 px-4 text-center">
+                    <td className="py-3.5 px-4 text-center">
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
                           cat.is_active
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-rose-100 text-rose-800'
@@ -228,7 +219,7 @@ export default function CategoryManagement() {
                       </span>
                     </td>
 
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <Button
                           variant="outline"
@@ -242,7 +233,7 @@ export default function CategoryManagement() {
                         <button
                           type="button"
                           onClick={() => handleToggleStatus(cat)}
-                          className={`text-xs font-bold px-2 py-1.5 rounded-lg border transition-colors ${
+                          className={`text-xs font-bold px-2.5 py-1.5 rounded-lg border transition-colors ${
                             cat.is_active
                               ? 'text-rose-600 border-rose-200 hover:bg-rose-50'
                               : 'text-emerald-700 border-emerald-200 hover:bg-emerald-50'
@@ -268,7 +259,7 @@ export default function CategoryManagement() {
         size="md"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="Category Name"
               required
@@ -293,7 +284,7 @@ export default function CategoryManagement() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div>
             <Select
               label="Display Icon"
               value={formData.icon}
@@ -313,18 +304,9 @@ export default function CategoryManagement() {
                 { value: 'Wrench', label: 'Wrench (Handyman)' },
               ]}
             />
-
-            <Input
-              label="Warranty Period (Days)"
-              type="number"
-              min="0"
-              required
-              value={formData.warranty_period_days}
-              onChange={(e) => setFormData({ ...formData, warranty_period_days: e.target.value })}
-            />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Input
               label="Min Price (₹)"
               type="number"

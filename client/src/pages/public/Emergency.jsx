@@ -113,7 +113,7 @@ export default function Emergency() {
 
           <div className="mt-8 flex items-center justify-center gap-4">
             <a
-              href="tel:18003492768"
+              href="tel:9597993402"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-rose-700 font-extrabold text-sm shadow-xl hover:bg-slate-100 transition-all"
             >
               <Phone className="w-4 h-4" />
@@ -148,7 +148,7 @@ export default function Emergency() {
               onChange={(e) => setSelectedCategory(e.target.value)}
               options={categories.map((c) => ({
                 value: c.id,
-                label: `${c.name} (${c.warranty_period_days}d warranty)`,
+                label: c.name,
               }))}
               placeholder="Choose category (e.g. Electrician, Plumber)"
             />

@@ -4,6 +4,10 @@
  * Provides helpers for integration tests using supertest against the Express app.
  * Tests run against the REAL app (imported directly) but use test database.
  */
+const path = require('path');
+const dotenv = require('dotenv');
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 const request = require('supertest');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -13,9 +17,9 @@ process.env.NODE_ENV = 'test';
 process.env.DB_HOST = process.env.DB_HOST || 'localhost';
 process.env.DB_PORT = process.env.DB_PORT || '3306';
 process.env.DB_USER = process.env.DB_USER || 'root';
-process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'root';
+process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'abcd';
 process.env.DB_NAME = process.env.DB_NAME || 'fixaround_db';
-process.env.JWT_SECRET = 'test-jwt-secret-for-fixaround';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-for-fixaround';
 process.env.JWT_EXPIRES_IN = '1h';
 process.env.CLIENT_URL = 'http://localhost:5173';
 process.env.TECHNICIAN_RESPONSE_TIMEOUT_SECONDS = '300';

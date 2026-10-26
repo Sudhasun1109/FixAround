@@ -281,7 +281,7 @@ export default function InvoiceView() {
 
         {/* Footer info */}
         <div className="pt-6 border-t border-slate-100 text-center text-[11px] text-slate-400">
-          <p>Thank you for choosing FixAround &bull; For support call 1800-FIX-AROUND or email support@fixaround.com</p>
+          <p>Thank you for choosing FixAround &bull; Tiruppur, Tamil Nadu &bull; For support call 9597993402 or email vichudass15@gmail.com</p>
         </div>
       </div>
     </div>

@@ -38,7 +38,7 @@ export default function Terms() {
         <section className="space-y-2">
           <h2 className="text-base font-bold text-fixblue-900">4. Warranty Claims & Re-Service</h2>
           <p>
-            Every completed job carries a platform warranty according to the specific service category (typically 3 to 30 days). If the exact identical repair fails within this timeframe, the customer may file a warranty claim. FixAround will dispatch an authorized technician for inspection and resolution at no additional service cost.
+            Every completed repair is backed by the standard FixAround Service Warranty. If the exact identical repair fails within this timeframe, the customer may file a warranty claim. FixAround will dispatch an authorized technician for inspection and resolution at no additional service cost.
           </p>
         </section>
 

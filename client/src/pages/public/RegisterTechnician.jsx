@@ -21,8 +21,8 @@ export default function RegisterTechnician() {
     phone: '',
     password: '',
     experience_years: '3',
-    service_city: 'New Delhi',
-    service_pincode: '110001',
+    service_city: 'Tiruppur',
+    service_pincode: '641601',
     service_radius_km: '15',
     bio: '',
   });

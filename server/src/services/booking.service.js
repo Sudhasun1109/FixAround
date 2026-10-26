@@ -50,7 +50,8 @@ async function create(customerId, data) {
       customer_latitude: data.customer_latitude || null,
       customer_longitude: data.customer_longitude || null,
       customer_address: data.customer_address || null,
-      scheduled_at: data.scheduled_at || null,
+      technician_id: data.technician_id || null,
+    scheduled_at: (data.scheduled_at ? new Date(data.scheduled_at).toISOString().slice(0, 19).replace('T', ' ') : null),
       status: BOOKING_STATUSES.REQUESTED,
       notes: data.notes || null
     }, conn);

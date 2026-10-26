@@ -25,7 +25,7 @@ const FAQS = [
   },
   {
     q: 'What is covered under the FixAround Warranty?',
-    a: 'Each service category carries a defined warranty period (ranging from 3 to 30 days). If the exact problem recurs during this period, you can file a 1-click warranty claim in your dashboard for a free inspection and re-service.',
+    a: 'Every completed repair is covered by the FixAround Service Quality Guarantee. If the exact problem recurs during this period, you can file a 1-click warranty claim in your dashboard for a free inspection and re-service.',
   },
   {
     q: 'Are all FixAround technicians background checked?',

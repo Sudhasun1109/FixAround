@@ -14,7 +14,7 @@ import {
   KeyRound,
   Monitor,
   Wrench,
-  Shield,
+  CheckCircle2,
   ArrowRight,
 } from 'lucide-react';
 
@@ -42,18 +42,16 @@ export default function ServiceCard({ category, onSelect }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs hover:shadow-lg hover:border-fixteal-400 transition-all flex flex-col justify-between group">
       <div>
-        {/* Header: Icon + Warranty Tag */}
+        {/* Header: Icon + Verified Badge */}
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="w-12 h-12 rounded-xl bg-fixblue-50 text-fixblue-800 flex items-center justify-center group-hover:bg-fixteal-50 group-hover:text-fixteal-700 transition-colors shadow-2xs">
             <IconComponent className="w-6 h-6 transition-transform group-hover:scale-110" />
           </div>
 
-          {category.warranty_period_days > 0 && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-              <Shield className="w-3 h-3" />
-              {category.warranty_period_days}d Warranty
-            </span>
-          )}
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-fixteal-800 border border-teal-100">
+            <CheckCircle2 className="w-3 h-3 text-fixteal-600" />
+            Verified
+          </span>
         </div>
 
         {/* Title & Description */}
@@ -62,7 +60,7 @@ export default function ServiceCard({ category, onSelect }) {
         </h3>
 
         <p className="mt-1.5 text-xs text-slate-500 line-clamp-2 leading-relaxed">
-          {category.description || 'Professional local repairs with verified certified experts.'}
+          {category.description || 'Professional doorstep repairs with verified certified specialists.'}
         </p>
 
         {/* Price & Inspection Fee */}

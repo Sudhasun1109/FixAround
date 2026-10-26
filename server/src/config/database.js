@@ -1,4 +1,3 @@
-
 const mysql = require('mysql2/promise');
 const config = require('./env');
 
@@ -9,10 +8,10 @@ const pool = mysql.createPool({
   password: config.db.password,
   database: config.db.database,
 
-  // Enable secure TLS connection for TiDB Cloud
-  ssl: {
-    minVersion: 'TLSv1.2'
-  },
+  // Enable TLS only if explicitly requested via DB_SSL=true
+  ssl: process.env.DB_SSL === 'true'
+    ? { minVersion: 'TLSv1.2', rejectUnauthorized: false }
+    : undefined,
 
   waitForConnections: config.db.waitForConnections,
   connectionLimit: config.db.connectionLimit,
