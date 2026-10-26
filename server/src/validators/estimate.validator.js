@@ -1,22 +1,19 @@
-const { body, param } = require('express-validator');
+const { body, param, check } = require('express-validator');
 
 const createEstimateValidation = [
-  param('id')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('Booking ID must be a positive integer'),
-
-  body('booking_id')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('booking_id must be a positive integer'),
-
-  body().custom((value, { req }) => {
-    if (!req.params?.id && !req.body?.booking_id) {
-      throw new Error('Booking ID is required');
-    }
-    return true;
-  }),
+  check('booking_id')
+    .custom((val, { req }) => {
+      const rawId = req.params?.id || req.body?.booking_id || val;
+      if (!rawId) {
+        throw new Error('Booking ID is required');
+      }
+      const isNum = Number.isInteger(Number(rawId)) && Number(rawId) > 0;
+      const isBookingNum = typeof rawId === 'string' && rawId.startsWith('BK-');
+      if (!isNum && !isBookingNum) {
+        throw new Error('Booking ID must be a positive integer');
+      }
+      return true;
+    }),
 
   body('labor_charge')
     .optional()

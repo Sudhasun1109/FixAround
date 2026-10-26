@@ -1,6 +1,17 @@
 const bookingService = require('../services/booking.service');
 const assignmentService = require('../services/assignment.service');
+const bookingRepo = require('../repositories/booking.repository');
 const apiResponse = require('../utils/apiResponse');
+
+async function resolveBookingId(rawId) {
+  if (!rawId) return null;
+  if (typeof rawId === 'string' && rawId.startsWith('BK-')) {
+    const b = await bookingRepo.findByBookingNumber(rawId);
+    return b ? b.id : null;
+  }
+  const parsed = parseInt(rawId, 10);
+  return isNaN(parsed) ? null : parsed;
+}
 
 async function create(req, res, next) {
   try {
@@ -41,7 +52,8 @@ async function getIncomingRequests(req, res, next) {
 
 async function getById(req, res, next) {
   try {
-    const booking = await bookingService.getById(parseInt(req.params.id, 10), req.user);
+    const bookingId = await resolveBookingId(req.params.id);
+    const booking = await bookingService.getById(bookingId, req.user);
     return apiResponse.success(res, booking, 'Booking details retrieved');
   } catch (err) {
     next(err);
@@ -51,7 +63,8 @@ async function getById(req, res, next) {
 async function cancel(req, res, next) {
   try {
     const { reason } = req.body;
-    const booking = await bookingService.cancel(parseInt(req.params.id, 10), req.user, reason);
+    const bookingId = await resolveBookingId(req.params.id);
+    const booking = await bookingService.cancel(bookingId, req.user, reason);
     return apiResponse.success(res, booking, 'Booking cancelled successfully');
   } catch (err) {
     next(err);
@@ -60,12 +73,18 @@ async function cancel(req, res, next) {
 
 async function updateStatus(req, res, next) {
   try {
-    const { status, notes } = req.body;
+    const { status, notes, final_total } = req.body;
+    const extraFields = {};
+    if (final_total !== undefined && final_total !== null) {
+      extraFields.final_total = parseFloat(final_total);
+    }
+    const bookingId = await resolveBookingId(req.params.id);
     const booking = await bookingService.updateStatus(
-      parseInt(req.params.id, 10),
+      bookingId,
       status,
       req.user,
-      notes
+      notes,
+      extraFields
     );
     return apiResponse.success(res, booking, 'Booking status updated successfully');
   } catch (err) {
@@ -76,8 +95,9 @@ async function updateStatus(req, res, next) {
 async function assign(req, res, next) {
   try {
     const { technician_id } = req.body;
+    const bookingId = await resolveBookingId(req.params.id);
     const result = await bookingService.assignTechnician(
-      parseInt(req.params.id, 10),
+      bookingId,
       parseInt(technician_id, 10),
       req.user.id
     );
@@ -89,8 +109,9 @@ async function assign(req, res, next) {
 
 async function accept(req, res, next) {
   try {
+    const bookingId = await resolveBookingId(req.params.id);
     const booking = await assignmentService.handleAcceptance(
-      parseInt(req.params.id, 10),
+      bookingId,
       req.user.id
     );
     return apiResponse.success(res, booking, 'Booking assignment accepted successfully');
@@ -102,8 +123,9 @@ async function accept(req, res, next) {
 async function reject(req, res, next) {
   try {
     const { reason } = req.body;
+    const bookingId = await resolveBookingId(req.params.id);
     const result = await assignmentService.handleRejection(
-      parseInt(req.params.id, 10),
+      bookingId,
       req.user.id,
       reason
     );
@@ -115,7 +137,8 @@ async function reject(req, res, next) {
 
 async function getTimeline(req, res, next) {
   try {
-    const timeline = await bookingService.getTimeline(parseInt(req.params.id, 10), req.user);
+    const bookingId = await resolveBookingId(req.params.id);
+    const timeline = await bookingService.getTimeline(bookingId, req.user);
     return apiResponse.success(res, timeline, 'Booking status timeline retrieved');
   } catch (err) {
     next(err);

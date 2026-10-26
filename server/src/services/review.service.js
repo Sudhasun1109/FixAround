@@ -13,10 +13,18 @@ const { pool } = require('../config/database');
  * @param {Object} data
  */
 async function create(bookingId, customerId, data) {
-  const booking = await bookingRepo.findById(bookingId);
+  let booking = null;
+  if (typeof bookingId === 'number' || /^\d+$/.test(bookingId)) {
+    booking = await bookingRepo.findById(parseInt(bookingId, 10));
+  }
+  if (!booking && typeof bookingId === 'string') {
+    booking = await bookingRepo.findByBookingNumber(bookingId);
+  }
   if (!booking) {
     throw AppError.notFound('Booking not found');
   }
+
+  const resolvedBookingId = booking.id;
 
   if (booking.customer_id !== customerId) {
     throw AppError.forbidden('You can only review bookings that you requested');
@@ -30,7 +38,7 @@ async function create(bookingId, customerId, data) {
     throw AppError.badRequest('No technician is associated with this booking');
   }
 
-  const alreadyReviewed = await reviewRepo.checkExists(bookingId, customerId);
+  const alreadyReviewed = await reviewRepo.checkExists(resolvedBookingId, customerId);
   if (alreadyReviewed) {
     throw AppError.conflict('You have already submitted a review for this booking');
   }
@@ -46,7 +54,7 @@ async function create(bookingId, customerId, data) {
     await conn.beginTransaction();
 
     reviewId = await reviewRepo.create({
-      booking_id: bookingId,
+      booking_id: resolvedBookingId,
       customer_id: customerId,
       technician_id: booking.technician_id,
       rating,
@@ -119,9 +127,18 @@ async function getAll(options = {}) {
   return await reviewRepo.findAll(options);
 }
 
+/**
+ * Get featured public reviews for landing page
+ * @param {number} limit
+ */
+async function getFeatured(limit = 6) {
+  return await reviewRepo.findFeatured(limit);
+}
+
 module.exports = {
   create,
   getByTechnician,
   getByCustomer,
-  getAll
+  getAll,
+  getFeatured,
 };

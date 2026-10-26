@@ -50,16 +50,10 @@ async function calculateAndRecord(bookingId, paymentId) {
       commission_amount: commissionAmount.toFixed(2),
       net_amount: netAmount.toFixed(2),
       settlement_status: 'PENDING',
-      notes: `Earnings for booking #${booking.booking_number}`
+      notes: `Earnings for booking #${booking.booking_number} (Awaiting Admin Verification & Settlement)`
     }, conn);
 
-    await conn.query(
-      `UPDATE technician_profiles 
-       SET total_earnings = total_earnings + ? 
-       WHERE user_id = ?`,
-      [netAmount.toFixed(2), booking.technician_id]
-    );
-
+    // Amount is retained in Platform account until Admin verifies and settles the payout
     await conn.commit();
   } catch (err) {
     await conn.rollback();
@@ -69,6 +63,24 @@ async function calculateAndRecord(bookingId, paymentId) {
   }
 
   return await earningsRepo.findByBookingId(bookingId);
+}
+
+/**
+ * Get all technician settlements for Admin verification
+ * @param {Object} options
+ */
+async function getAll(options = {}) {
+  return await earningsRepo.findAll(options);
+}
+
+/**
+ * Admin verifies and settles payout to technician
+ * @param {number} earningId
+ * @param {number} adminId
+ * @param {string|null} notes
+ */
+async function settle(earningId, adminId, notes = null) {
+  return await earningsRepo.settle(earningId, adminId, notes);
 }
 
 /**
@@ -88,14 +100,17 @@ async function getSummary(technicianId) {
   const summary = await earningsRepo.getTotal(technicianId);
   return {
     ...summary,
-    total_earned: summary.total_net,
-    monthly_earnings: summary.total_net,
-    net_payout: summary.total_net
+    total_earned: summary.settled_amount || 0.00,
+    monthly_earnings: summary.settled_amount || 0.00,
+    net_payout: summary.settled_amount || 0.00,
+    pending_settlement: summary.pending_settlement || 0.00
   };
 }
 
 module.exports = {
   calculateAndRecord,
+  getAll,
+  settle,
   getByTechnician,
   getSummary
 };

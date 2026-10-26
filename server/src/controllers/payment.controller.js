@@ -1,9 +1,21 @@
 const paymentService = require('../services/payment.service');
+const bookingRepo = require('../repositories/booking.repository');
 const apiResponse = require('../utils/apiResponse');
+
+async function resolveBookingId(rawId) {
+  if (!rawId) return null;
+  if (typeof rawId === 'string' && rawId.startsWith('BK-')) {
+    const b = await bookingRepo.findByBookingNumber(rawId);
+    return b ? b.id : null;
+  }
+  const parsed = parseInt(rawId, 10);
+  return isNaN(parsed) ? null : parsed;
+}
 
 async function initiate(req, res, next) {
   try {
-    const bookingId = parseInt(req.params.id || req.body.booking_id, 10);
+    const rawId = req.params.id || req.body.booking_id;
+    const bookingId = await resolveBookingId(rawId);
     const { payment_method, amount } = req.body;
     const result = await paymentService.initiate(bookingId, req.user.id, payment_method, amount);
     return apiResponse.success(res, result, 'Payment initiated', 201);
@@ -14,7 +26,8 @@ async function initiate(req, res, next) {
 
 async function getByBooking(req, res, next) {
   try {
-    const bookingId = parseInt(req.params.bookingId || req.params.id, 10);
+    const rawId = req.params.bookingId || req.params.id;
+    const bookingId = await resolveBookingId(rawId);
     const payments = await paymentService.getByBooking(bookingId);
     return apiResponse.success(res, payments, 'Payments retrieved for booking');
   } catch (err) {
@@ -81,6 +94,17 @@ async function verifyRazorpay(req, res, next) {
   }
 }
 
+async function payWithWallet(req, res, next) {
+  try {
+    const bookingId = parseInt(req.body.booking_id || req.params.id, 10);
+    const pointsToRedeem = parseInt(req.body.points_redeemed || 0, 10);
+    const result = await paymentService.payWithWallet(bookingId, req.user.id, pointsToRedeem);
+    return apiResponse.success(res, result, result.message, 200);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   initiate,
   getByBooking,
@@ -88,5 +112,6 @@ module.exports = {
   webhook,
   getMyPayments,
   createRazorpayOrder,
-  verifyRazorpay
+  verifyRazorpay,
+  payWithWallet
 };

@@ -66,6 +66,7 @@ export const authApi = {
 // Services Categories API
 export const servicesApi = {
   getAll: (params) => api.get('/services', { params }),
+  getStates: () => api.get('/services/states'),
   getById: (id) => api.get(`/services/${id}`),
   getBySlug: (slug) => api.get(`/services/slug/${slug}`),
   create: (data) => api.post('/services', data),
@@ -96,7 +97,7 @@ export const bookingsApi = {
   getAll: (params) => api.get('/bookings', { params }),
   getById: (id) => api.get(`/bookings/${id}`),
   cancel: (id, reason) => api.post(`/bookings/${id}/cancel`, { reason }),
-  updateStatus: (id, status, notes = '') => api.patch(`/bookings/${id}/status`, { status, notes }),
+  updateStatus: (id, status, notes = '', extra = {}) => api.patch(`/bookings/${id}/status`, { status, notes, ...extra }),
   accept: (id) => api.post(`/bookings/${id}/accept`),
   reject: (id, reason) => api.post(`/bookings/${id}/reject`, { reason }),
   getTimeline: (id) => api.get(`/bookings/${id}/timeline`),
@@ -117,6 +118,7 @@ export const estimatesApi = {
 // Payments API
 export const paymentsApi = {
   initiate: (data) => api.post('/payments/initiate', data),
+  payWithWallet: (data) => api.post('/payments/wallet-pay', data),
   createRazorpayOrder: (data) => api.post('/payments/razorpay/create-order', data),
   verifyRazorpay: (data) => api.post('/payments/razorpay/verify', data),
   verify: (data) => api.post('/payments/verify', data),
@@ -136,6 +138,7 @@ export const invoicesApi = {
 // Reviews API
 export const reviewsApi = {
   create: (data) => api.post('/reviews', data),
+  getFeatured: (params) => api.get('/reviews/featured', { params }),
   getByTechnician: (technicianId, params) => api.get(`/reviews/technician/${technicianId}`, { params }),
   getMyReviews: (params) => api.get('/reviews/my-reviews', { params }),
   update: (id, data) => api.put(`/reviews/${id}`, data),
@@ -175,11 +178,14 @@ export const adminApi = {
   getBookings: (params) => api.get('/admin/bookings', { params }),
   getEmergencyBookings: (params) => api.get('/admin/bookings/emergency', { params }),
   getPayments: (params) => api.get('/admin/payments', { params }),
+  getSettlements: (params) => api.get('/admin/settlements', { params }),
+  settlePayout: (id, data = {}) => api.post(`/admin/settlements/${id}/settle`, data),
   getSettings: () => api.get('/admin/settings'),
   updateSetting: (key, value) => api.put(`/admin/settings/${key}`, { value }),
   getAuditLogs: (params) => api.get('/admin/audit-logs', { params }),
   reassignBooking: (bookingId, technicianId) => api.post(`/admin/bookings/${bookingId}/reassign`, { technician_id: technicianId }),
   getTechniciansForVerification: (params) => api.get('/admin/technicians/verification', { params }),
+  reviewDocument: (documentId, data) => api.post(`/admin/technicians/documents/${documentId}/review`, data),
   getClaims: (params) => api.get('/admin/claims', { params }),
   getReviews: (params) => api.get('/admin/reviews', { params }),
   toggleReviewVisibility: (id, isVisible) => api.patch(`/admin/reviews/${id}/visibility`, { is_visible: isVisible }),
@@ -198,6 +204,10 @@ export const addressesApi = {
 // Customer API (Wallet, etc.)
 export const customerApi = {
   getWallet: () => api.get('/customers/wallet'),
+  topupWallet: (amount) => api.post('/customers/wallet/topup', { amount }),
+  createWalletRazorpayOrder: (amount) => api.post('/customers/wallet/razorpay/create-order', { amount }),
+  verifyWalletRazorpay: (data) => api.post('/customers/wallet/razorpay/verify', data),
+  getStates: () => api.get('/customers/states'),
 };
 
 export default api;

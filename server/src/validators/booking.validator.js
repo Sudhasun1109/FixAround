@@ -56,8 +56,15 @@ const createBookingValidation = [
 
 const cancelBookingValidation = [
   param('id')
-    .isInt({ min: 1 })
-    .withMessage('Booking ID must be a positive integer'),
+    .custom((val) => {
+      if (!val) throw new Error('Booking ID is required');
+      const isNum = Number.isInteger(Number(val)) && Number(val) > 0;
+      const isBookingNum = typeof val === 'string' && val.startsWith('BK-');
+      if (!isNum && !isBookingNum) {
+        throw new Error('Booking ID must be a positive integer');
+      }
+      return true;
+    }),
 
   body('reason')
     .optional()
@@ -68,8 +75,15 @@ const cancelBookingValidation = [
 
 const updateStatusValidation = [
   param('id')
-    .isInt({ min: 1 })
-    .withMessage('Booking ID must be a positive integer'),
+    .custom((val) => {
+      if (!val) throw new Error('Booking ID is required');
+      const isNum = Number.isInteger(Number(val)) && Number(val) > 0;
+      const isBookingNum = typeof val === 'string' && val.startsWith('BK-');
+      if (!isNum && !isBookingNum) {
+        throw new Error('Booking ID must be a positive integer');
+      }
+      return true;
+    }),
 
   body('status')
     .notEmpty()

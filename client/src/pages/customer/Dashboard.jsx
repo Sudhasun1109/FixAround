@@ -105,14 +105,17 @@ export default function CustomerDashboard() {
 
       {/* Metrics / Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-5 rounded-3xl shadow-sm flex flex-col justify-between relative overflow-hidden">
+        <Link
+          to="/customer/wallet"
+          className="bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white p-5 rounded-3xl shadow-sm flex flex-col justify-between relative overflow-hidden group transition-all"
+        >
           <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-100 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
               FixAround Wallet
             </span>
-            <div className="p-2 bg-white/20 rounded-xl">
+            <div className="p-2 bg-white/20 rounded-xl group-hover:scale-110 transition-transform">
               <Wallet className="w-4 h-4 text-white" />
             </div>
           </div>
@@ -120,12 +123,12 @@ export default function CustomerDashboard() {
             <div className="text-3xl font-extrabold tracking-tight">
               {formatCurrency(wallet.wallet_balance)}
             </div>
-            <p className="text-[11px] text-emerald-100 mt-1 flex items-center gap-1">
+            <p className="text-[11px] text-emerald-100 mt-1 flex items-center justify-between">
               <span>● Active Balance</span>
-              <span className="opacity-70">• Usable for bookings</span>
+              <span className="underline underline-offset-2">View & Topup →</span>
             </p>
           </div>
-        </div>
+        </Link>
 
         <StatsCard
           label="Active Jobs"
@@ -160,9 +163,13 @@ export default function CustomerDashboard() {
               <Wallet className="w-4 h-4 text-emerald-600" />
               <h3 className="text-sm font-bold text-fixblue-900">Wallet Activity & Refunds</h3>
             </div>
-            <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-              Live Wallet
-            </span>
+            <Link
+              to="/customer/wallet"
+              className="text-[11px] font-bold text-fixteal-600 hover:text-fixteal-700 flex items-center gap-1"
+            >
+              <span>View All & Refunds</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
 
           <div className="divide-y divide-slate-100">

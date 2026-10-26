@@ -348,7 +348,9 @@ async function findAll({ page = 1, limit = 20, status = null, city = null, searc
   const conditions = [];
   const values = [];
 
-  if (status) {
+  if (status === 'pending') {
+    conditions.push("(tp.verification_status = 'pending' OR EXISTS (SELECT 1 FROM technician_documents td WHERE td.technician_id = tp.id AND td.status = 'PENDING'))");
+  } else if (status) {
     conditions.push('tp.verification_status = ?');
     values.push(status);
   }
