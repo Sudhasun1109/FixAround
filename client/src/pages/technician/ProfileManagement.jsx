@@ -15,8 +15,8 @@ export default function ProfileManagement() {
     bio: '',
     experience_years: '5',
     avatar_url: '',
-    service_city: 'New Delhi',
-    service_pincode: '110001',
+    service_city: 'Tiruppur',
+    service_pincode: '641601',
     service_radius_km: '15',
   });
   const [loading, setLoading] = useState(true);
@@ -32,8 +32,8 @@ export default function ProfileManagement() {
           bio: data.bio || '',
           experience_years: String(data.experience_years || 5),
           avatar_url: data.avatar_url || '',
-          service_city: data.service_city || 'New Delhi',
-          service_pincode: data.service_pincode || '110001',
+          service_city: data.service_city || 'Tiruppur',
+          service_pincode: data.service_pincode || '641601',
           service_radius_km: String(data.service_radius_km || 15),
         });
       } catch {
@@ -43,8 +43,8 @@ export default function ProfileManagement() {
             bio: user.bio || '',
             experience_years: String(user.experience_years || 5),
             avatar_url: user.avatar_url || '',
-            service_city: user.service_city || 'New Delhi',
-            service_pincode: user.service_pincode || '110001',
+            service_city: user.service_city || 'Tiruppur',
+            service_pincode: user.service_pincode || '641601',
             service_radius_km: String(user.service_radius_km || 15),
           });
         }

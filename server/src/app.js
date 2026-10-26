@@ -123,6 +123,7 @@ app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/earnings', earningsRoutes);
 app.use('/api/v1/customers', customerRoutes);
+app.use('/api/v1/addresses', customerRoutes);
 
 // Also mount root payments / reviews / claims / invoices to satisfy endpoints like:
 // POST /api/v1/bookings/:id/payments, POST /api/v1/bookings/:id/reviews, GET /api/v1/my-payments, etc.

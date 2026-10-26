@@ -65,11 +65,7 @@ export default function Contact() {
                   <Phone className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="font-bold text-slate-800 block">Toll-Free Helpline</span>
-                  <a href="tel:18003492768" className="text-fixblue-800 font-semibold hover:underline">
-                    1800-FIX-AROUND (1800-349-2768)
-                  </a>
-                  <span className="block text-[11px] text-slate-400 mt-0.5">24/7 for emergency booking support</span>
+                  <span className="font-bold text-slate-800 block">Customer Helpline</span><a href="tel:9597993402" className="text-fixblue-800 font-semibold hover:underline">9597993402</a><span className="block text-[11px] text-slate-400 mt-0.5">Available for service & booking support</span>
                 </div>
               </div>
 
@@ -79,8 +75,8 @@ export default function Contact() {
                 </div>
                 <div>
                   <span className="font-bold text-slate-800 block">Email Support</span>
-                  <a href="mailto:support@fixaround.com" className="text-fixblue-800 font-semibold hover:underline">
-                    support@fixaround.com
+                  <a href="mailto:vichudass15@gmail.com" className="text-fixblue-800 font-semibold hover:underline">
+                    vichudass15@gmail.com
                   </a>
                   <span className="block text-[11px] text-slate-400 mt-0.5">Response within 2 hours</span>
                 </div>
@@ -91,12 +87,7 @@ export default function Contact() {
                   <MapPin className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="font-bold text-slate-800 block">Operations Headquarters</span>
-                  <p className="text-slate-600 mt-0.5">
-                    FixAround India Pvt. Ltd.<br />
-                    Outer Circle, Connaught Place,<br />
-                    New Delhi, Delhi 110001
-                  </p>
+                  <span className="font-bold text-slate-800 block">Location</span><p className="text-slate-600 mt-0.5 font-medium">Tiruppur, Tamil Nadu</p>
                 </div>
               </div>
 

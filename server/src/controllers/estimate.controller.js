@@ -28,11 +28,8 @@ async function getByBooking(req, res, next) {
     const rawId = req.params.id || req.params.bookingId;
     const bookingId = await resolveBookingId(rawId);
     const estimates = await estimateService.getByBooking(bookingId);
-    const latestEstimate = Array.isArray(estimates) && estimates.length > 0 ? estimates[0] : null;
-    return apiResponse.success(res, {
-      estimate: latestEstimate,
-      estimates: Array.isArray(estimates) ? estimates : []
-    }, 'Estimates retrieved for booking');
+    const list = Array.isArray(estimates) ? estimates : [];
+    return apiResponse.success(res, list, 'Estimates retrieved for booking');
   } catch (err) {
     next(err);
   }

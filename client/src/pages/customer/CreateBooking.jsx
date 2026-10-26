@@ -259,7 +259,7 @@ export default function CreateBooking() {
               onChange={(e) => setSelectedCategoryId(e.target.value)}
               options={categories.map((c) => ({
                 value: c.id,
-                label: `${c.name} (Warranty: ${c.warranty_period_days} days)`,
+                label: c.name,
               }))}
               placeholder="Choose category (e.g. Electrician, Plumber)"
             />

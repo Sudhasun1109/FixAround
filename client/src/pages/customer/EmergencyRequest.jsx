@@ -209,7 +209,7 @@ export default function EmergencyRequest() {
             onChange={(e) => setSelectedCategory(e.target.value)}
             options={categories.map((c) => ({
               value: c.id,
-              label: `${c.name} (${c.warranty_period_days}d Warranty)`,
+              label: c.name,
             }))}
             placeholder="Select category (e.g. Electrician, Plumber)"
           />

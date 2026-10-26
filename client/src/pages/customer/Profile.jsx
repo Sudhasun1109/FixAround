@@ -4,6 +4,8 @@ import { authApi, addressesApi, customerApi } from '../../services/api';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
+import Select from '../../components/common/Select';
+import { INDIAN_STATES } from '../../utils/constants';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Spinner from '../../components/common/Spinner';
 import { showToast } from '../../components/common/Toast';
@@ -14,6 +16,7 @@ import {
   MapPin,
   Plus,
   Trash2,
+  Edit2,
   CheckCircle,
   Home,
   Briefcase,
@@ -34,12 +37,17 @@ export default function CustomerProfile() {
   const [addresses, setAddresses] = useState([]);
   const [loadingAddresses, setLoadingAddresses] = useState(true);
   const [showAddressModal, setShowAddressModal] = useState(false);
+
+  const [editingAddressId, setEditingAddressId] = useState(null);
   const [statesList, setStatesList] = useState([]);
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [addressForm, setAddressForm] = useState({
     label: 'Home',
     address_line1: '',
     address_line2: '',
+    city: 'Tiruppur',
+    state: 'Tamil Nadu',
+    pincode: '641601',
     city: 'New Delhi',
     state: 'Delhi',
     pincode: '110001',
@@ -170,7 +178,35 @@ export default function CustomerProfile() {
     }
   };
 
-  // Add address
+  const handleOpenAddAddress = () => {
+    setEditingAddressId(null);
+    setAddressForm({
+      label: 'Home',
+      address_line1: '',
+      address_line2: '',
+      city: 'Tiruppur',
+      state: 'Tamil Nadu',
+      pincode: '641601',
+      is_default: addresses.length === 0 ? 1 : 0,
+    });
+    setShowAddressModal(true);
+  };
+
+  const handleOpenEditAddress = (addr) => {
+    setEditingAddressId(addr.id);
+    setAddressForm({
+      label: addr.label || 'Home',
+      address_line1: addr.address_line1 || '',
+      address_line2: addr.address_line2 || '',
+      city: addr.city || 'Tiruppur',
+      state: addr.state || 'Tamil Nadu',
+      pincode: addr.pincode || '641601',
+      is_default: addr.is_default ? 1 : 0,
+    });
+    setShowAddressModal(true);
+  };
+
+  // Add or Update address
   const handleSaveAddress = async (e) => {
     e.preventDefault();
     if (!addressForm.address_line1 || !addressForm.city || !addressForm.pincode) {
@@ -180,21 +216,27 @@ export default function CustomerProfile() {
 
     try {
       setSavingAddress(true);
-      await addressesApi.create(addressForm);
-      showToast.success('Address added to your profile.');
+      if (editingAddressId) {
+        await addressesApi.update(editingAddressId, addressForm);
+        showToast.success('Address updated successfully.');
+      } else {
+        await addressesApi.create(addressForm);
+        showToast.success('Address added to your profile.');
+      }
       setShowAddressModal(false);
+      setEditingAddressId(null);
       setAddressForm({
         label: 'Home',
         address_line1: '',
         address_line2: '',
-        city: 'New Delhi',
-        state: 'Delhi',
-        pincode: '110001',
+        city: 'Tiruppur',
+        state: 'Tamil Nadu',
+        pincode: '641601',
         is_default: 0,
       });
       fetchAddresses();
     } catch (err) {
-      showToast.error(err.message || 'Failed to add address');
+      showToast.error(err.message || (editingAddressId ? 'Failed to update address' : 'Failed to add address'));
     } finally {
       setSavingAddress(false);
     }
@@ -331,7 +373,7 @@ export default function CustomerProfile() {
             variant="secondary"
             size="sm"
             icon={Plus}
-            onClick={() => setShowAddressModal(true)}
+            onClick={handleOpenAddAddress}
           >
             Add Address
           </Button>
@@ -377,19 +419,30 @@ export default function CustomerProfile() {
                 </div>
 
                 <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs">
-                  {!addr.is_default && (
+                  <div className="flex items-center gap-3">
+                    {!addr.is_default && (
+                      <button
+                        type="button"
+                        onClick={() => handleSetDefaultAddress(addr.id)}
+                        className="text-fixteal-600 font-semibold hover:underline"
+                      >
+                        Make Default
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => handleSetDefaultAddress(addr.id)}
-                      className="text-fixteal-600 font-semibold hover:underline"
+                      onClick={() => handleOpenEditAddress(addr)}
+                      className="text-slate-600 hover:text-fixteal-600 font-semibold flex items-center gap-1"
                     >
-                      Make Default
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
                     </button>
-                  )}
+                  </div>
                   <button
                     type="button"
                     onClick={() => setDeletingAddressId(addr.id)}
                     className="text-rose-600 hover:text-rose-700 p-1 ml-auto"
+                    title="Remove address"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -447,7 +500,7 @@ export default function CustomerProfile() {
       <Modal
         isOpen={showAddressModal}
         onClose={() => setShowAddressModal(false)}
-        title="Add New Service Address"
+        title={editingAddressId ? "Edit Service Address" : "Add New Service Address"}
         size="md"
       >
         <form onSubmit={handleSaveAddress} className="space-y-4">
@@ -536,6 +589,7 @@ export default function CustomerProfile() {
               value={addressForm.city}
               onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
             />
+            <Select label="State" required value={addressForm.state} onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })} options={INDIAN_STATES.map((s) => ({ value: s, label: s }))} />
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -567,6 +621,7 @@ export default function CustomerProfile() {
                 )}
               </select>
             </div>
+
 
             <Input
               label="Pincode"
