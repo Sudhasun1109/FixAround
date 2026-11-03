@@ -219,7 +219,7 @@ async function getIncomingForTechnician(technicianId, conn = pool) {
     WHERE (
       (ba.technician_id = ? AND ba.status = 'PENDING' AND (ba.deadline IS NULL OR ba.deadline > UTC_TIMESTAMP()))
       OR
-      (b.technician_id = ? AND b.status = 'ASSIGNED')
+      (b.technician_id = ? AND b.status IN ('REQUESTED', 'ASSIGNED'))
     )
     ORDER BY b.id DESC
   `;

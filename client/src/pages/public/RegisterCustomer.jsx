@@ -73,28 +73,28 @@ export default function RegisterCustomer() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-12rem)] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-12rem)] flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <Link to="/" className="inline-flex items-center gap-2 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-fixblue-800 flex items-center justify-center text-white shadow-md">
-            <Wrench className="w-5 h-5 text-fixteal-400" />
+          <div className="w-11 h-11 rounded-2xl bg-fixblue-500 flex items-center justify-center text-white shadow-md shadow-blue-500/25">
+            <Wrench className="w-5 h-5 text-white" />
           </div>
-          <span className="text-2xl font-extrabold text-fixblue-900">
-            Fix<span className="text-fixteal-600">Around</span>
+          <span className="text-2xl font-extrabold text-[#172033] tracking-tight">
+            Fix<span className="text-fixblue-500">Around</span>
           </span>
         </Link>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-[#172033] tracking-tight">
           Create Customer Account
         </h2>
-        <p className="mt-2 text-xs text-slate-500">
-          Book verified local repairs with warranty protection
+        <p className="mt-1 text-xs sm:text-sm text-slate-500 font-medium">
+          Book verified local repairs with 30-day warranty protection.
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-6 shadow-xl rounded-3xl sm:px-10 border border-slate-200">
+      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-6 shadow-card rounded-3xl sm:px-10 border border-slate-100">
           {error && (
-            <div className="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium">
+            <div className="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium">
               {error}
             </div>
           )}
@@ -161,22 +161,20 @@ export default function RegisterCustomer() {
             />
 
             <div className="pt-2">
-              <Button
+              <button
                 type="submit"
-                variant="primary"
-                size="lg"
-                fullWidth
-                loading={loading}
-                icon={UserPlus}
+                disabled={loading}
+                className="w-full py-3.5 rounded-full bg-fixblue-500 hover:bg-fixblue-600 active:scale-95 text-white font-extrabold text-sm shadow-md shadow-blue-500/30 transition-all flex items-center justify-center gap-2"
               >
-                Create Account
-              </Button>
+                <UserPlus className="w-4 h-4" />
+                <span>{loading ? 'Creating Account...' : 'Create Account'}</span>
+              </button>
             </div>
           </form>
 
-          <div className="mt-6 text-center text-xs text-slate-500">
+          <div className="mt-6 text-center text-xs text-slate-500 font-medium">
             Already have an account?{' '}
-            <Link to="/login" className="font-bold text-fixteal-600 hover:text-fixteal-700">
+            <Link to="/login" className="font-bold text-fixblue-500 hover:text-fixblue-600">
               Sign In
             </Link>
           </div>

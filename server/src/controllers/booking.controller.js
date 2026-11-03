@@ -169,6 +169,51 @@ async function getAll(req, res, next) {
   }
 }
 
+
+async function generatePin(req, res, next) {
+  try {
+    const bookingId = await resolveBookingId(req.params.id);
+    const result = await bookingService.generatePin(bookingId, req.user);
+    return apiResponse.success(res, result, 'Completion PIN generated successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getVerificationPin(req, res, next) {
+  try {
+    const bookingId = await resolveBookingId(req.params.id);
+    const result = await bookingService.getVerificationPin(bookingId, req.user);
+    return apiResponse.success(res, result, 'Verification PIN retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function verifyPin(req, res, next) {
+  try {
+    const { pin } = req.body;
+    if (!pin || !/^\d{4}$/.test(String(pin).trim())) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid 4-digit PIN' });
+    }
+    const bookingId = await resolveBookingId(req.params.id);
+    const result = await bookingService.verifyPin(bookingId, req.user, String(pin).trim());
+    return apiResponse.success(res, result, 'PIN verified successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function processPayment(req, res, next) {
+  try {
+    const bookingId = await resolveBookingId(req.params.id);
+    const result = await bookingService.processPayment(bookingId, req.user, req.body);
+    return apiResponse.success(res, result, 'Payment recorded and service completed');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   create,
   getMyBookings,
@@ -180,5 +225,9 @@ module.exports = {
   accept,
   reject,
   getTimeline,
-  getAll
+  getAll,
+  generatePin,
+  getVerificationPin,
+  verifyPin,
+  processPayment
 };

@@ -62,4 +62,32 @@ router.post(
   bookingController.reject
 );
 
+
+router.post(
+  '/:id/generate-pin',
+  verifyToken,
+  authorize(ROLES.TECHNICIAN),
+  bookingController.generatePin
+);
+
+router.get(
+  '/:id/verification-pin',
+  verifyToken,
+  authorize(ROLES.CUSTOMER, ROLES.ADMIN),
+  bookingController.getVerificationPin
+);
+
+router.post(
+  '/:id/verify-pin',
+  verifyToken,
+  authorize(ROLES.TECHNICIAN),
+  bookingController.verifyPin
+);
+
+router.post(
+  '/:id/payment',
+  verifyToken,
+  bookingController.processPayment
+);
+
 module.exports = router;

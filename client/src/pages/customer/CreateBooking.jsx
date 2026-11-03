@@ -24,7 +24,9 @@ export default function CreateBooking() {
 
   const rawCat = searchParams.get('categoryId');
   const preselectedCategory = rawCat && rawCat !== 'undefined' && rawCat !== 'null' ? rawCat : '';
-  const preselectedTech = searchParams.get('technicianId') || '';
+  const preselectedTech = searchParams.get('technicianId') || searchParams.get('technician_id') || '';
+  const [availableTechs, setAvailableTechs] = useState([]);
+  const [loadingTechs, setLoadingTechs] = useState(false);
 
   const [categories, setCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState(preselectedCategory);
@@ -112,6 +114,31 @@ export default function CreateBooking() {
 
     initData();
   }, [preselectedTech]);
+  // Load available technicians when category changes
+  useEffect(() => {
+    if (!selectedCategoryId) {
+      setAvailableTechs([]);
+      return;
+    }
+    const loadTechs = async () => {
+      try {
+        setLoadingTechs(true);
+        const res = await techniciansApi.getAll({
+          category_id: selectedCategoryId,
+          is_available: 1,
+        });
+        const list = res?.data?.technicians || res?.data || [];
+        setAvailableTechs(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.error('Failed to load available specialists:', err);
+        setAvailableTechs([]);
+      } finally {
+        setLoadingTechs(false);
+      }
+    };
+    loadTechs();
+  }, [selectedCategoryId]);
+
 
   const handleSavedAddressChange = (e) => {
     const id = e.target.value;
@@ -256,13 +283,99 @@ export default function CreateBooking() {
               label="Service Category"
               required
               value={selectedCategoryId}
-              onChange={(e) => setSelectedCategoryId(e.target.value)}
+              onChange={(e) => {
+                setSelectedCategoryId(e.target.value);
+                setTechnicianId('');
+                setTechnicianName('');
+              }}
               options={categories.map((c) => ({
                 value: c.id,
                 label: c.name,
               }))}
               placeholder="Choose category (e.g. Electrician, Plumber)"
             />
+
+            {/* Phase 1: Available Technicians for Selected Service */}
+            {selectedCategoryId && (
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Available Specialists ({currentCategory?.name || 'Selected Service'})
+                  </label>
+                  {technicianId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTechnicianId('');
+                        setTechnicianName('');
+                      }}
+                      className="text-xs font-bold text-fixblue-600 hover:underline"
+                    >
+                      Clear Selection (Auto-Dispatch)
+                    </button>
+                  )}
+                </div>
+
+                {loadingTechs ? (
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500 animate-pulse">
+                    Scanning available verified technicians...
+                  </div>
+                ) : availableTechs.length === 0 ? (
+                  <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-100 text-xs text-slate-600 flex items-center justify-between">
+                    <span>No specific specialist selected. Our system will automatically dispatch the nearest active technician once booked.</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-1">
+                    {availableTechs.map((tech) => {
+                      const isSelected = String(technicianId) === String(tech.id || tech.user_id);
+                      const techName = tech.full_name || `${tech.first_name || ''} ${tech.last_name || ''}`.trim() || 'Certified Specialist';
+                      const rate = tech.hourly_rate || tech.base_price || 499;
+
+                      return (
+                        <div
+                          key={tech.id || tech.user_id}
+                          onClick={() => {
+                            setTechnicianId(tech.id || tech.user_id);
+                            setTechnicianName(techName);
+                          }}
+                          className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-3 ${
+                            isSelected
+                              ? 'border-fixblue-500 bg-blue-50/50 shadow-xs ring-2 ring-blue-100'
+                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          <img
+                            src={tech.avatar_url || 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=150&auto=format&fit=crop&q=80'}
+                            alt={techName}
+                            className="w-12 h-12 rounded-xl object-cover border border-slate-100 shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <h4 className="text-xs font-bold text-slate-900 truncate">
+                                {techName}
+                              </h4>
+                              {isSelected && (
+                                <span className="px-1.5 py-0.5 rounded-full bg-fixblue-500 text-[10px] font-bold text-white shrink-0">
+                                  Selected
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                              <span className="font-semibold text-amber-500">★ {Number(tech.avg_rating || 4.8).toFixed(1)}</span>
+                              <span>&bull;</span>
+                              <span>{tech.completed_jobs || 15}+ jobs</span>
+                            </div>
+                            <div className="text-[11px] font-bold text-fixblue-900 mt-0.5">
+                              ₹{rate}/hr
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {technicianName && (
               <div className="p-3 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between text-xs text-teal-800">

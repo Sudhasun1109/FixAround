@@ -57,6 +57,7 @@ const TechnicianReviews = lazy(() => import('../pages/technician/Reviews'));
 const VerificationStatus = lazy(() => import('../pages/technician/VerificationStatus'));
 
 // Lazy-loaded Admin Pages
+const AdminLogin = lazy(() => import('../pages/admin/AdminLogin'));
 const AdminDashboard = lazy(() => import('../pages/admin/Dashboard'));
 const CustomerManagement = lazy(() => import('../pages/admin/CustomerManagement'));
 const TechnicianVerification = lazy(() => import('../pages/admin/TechnicianVerification'));
@@ -90,6 +91,9 @@ export default function AppRouter() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
         </Route>
+
+        {/* STANDALONE ADMIN AUTH */}
+        <Route path="/admin/login" element={<AdminLogin />} />
 
         {/* CUSTOMER ROUTES */}
         <Route

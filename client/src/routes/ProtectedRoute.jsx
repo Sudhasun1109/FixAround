@@ -12,7 +12,8 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    const target = location.pathname.startsWith('/admin') ? '/admin/login' : '/login';
+    return <Navigate to={target} state={{ from: location }} replace />;
   }
 
   return children ? children : <Outlet />;

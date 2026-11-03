@@ -5,7 +5,16 @@ import TechnicianCard from '../../components/technician/TechnicianCard';
 import Spinner from '../../components/common/Spinner';
 import EmptyState from '../../components/common/EmptyState';
 import Button from '../../components/common/Button';
-import { Search, MapPin, SlidersHorizontal, Users, RefreshCw } from 'lucide-react';
+import {
+  Search,
+  MapPin,
+  SlidersHorizontal,
+  Users,
+  RefreshCw,
+  LayoutGrid,
+  List,
+  Sparkles,
+} from 'lucide-react';
 
 export default function SearchTechnicians() {
   const [searchParams] = useSearchParams();
@@ -13,11 +22,12 @@ export default function SearchTechnicians() {
 
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
-  const [city, setCity] = useState('New Delhi');
-  const [radiusKm, setRadiusKm] = useState(15);
+  const [city, setCity] = useState('Tiruppur');
+  const [radiusKm, setRadiusKm] = useState(25);
   const [onlyOnline, setOnlyOnline] = useState(false);
   const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState('horizontal'); // 'horizontal' | 'grid'
 
   // Load categories on mount
   useEffect(() => {
@@ -68,44 +78,91 @@ export default function SearchTechnicians() {
   }, [searchNearby]);
 
   return (
-    <div className="space-y-8">
-      {/* Title */}
-      <div>
-        <span className="text-xs font-bold text-fixteal-600 uppercase tracking-wider">
-          Nearby Professionals
-        </span>
-        <h1 className="text-2xl font-extrabold text-fixblue-900 mt-0.5">
-          Find & Select Local Technicians
-        </h1>
-        <p className="text-xs text-slate-500 mt-1">
-          Search background-checked specialists operating within your exact radius.
-        </p>
+    <div className="max-w-5xl mx-auto space-y-6">
+      {/* Title Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-xs font-bold text-fixblue-500 uppercase tracking-wider">
+            Verified Directory
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#172033] tracking-tight mt-0.5">
+            Find & Hire Local Experts
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+            Browse certified technicians operating near your location with upfront rates.
+          </p>
+        </div>
+
+        {/* View Toggle */}
+        <div className="flex items-center gap-2 bg-white p-1 rounded-full border border-slate-200 shadow-2xs self-start">
+          <button
+            type="button"
+            onClick={() => setViewMode('horizontal')}
+            className={`p-2 rounded-full transition-colors ${
+              viewMode === 'horizontal'
+                ? 'bg-fixblue-500 text-white shadow-xs'
+                : 'text-slate-400 hover:text-slate-700'
+            }`}
+            title="List View"
+          >
+            <List className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded-full transition-colors ${
+              viewMode === 'grid'
+                ? 'bg-fixblue-500 text-white shadow-xs'
+                : 'text-slate-400 hover:text-slate-700'
+            }`}
+            title="Grid View"
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Filter Card */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              Service Category
-            </label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="block w-full rounded-lg border border-slate-300 text-xs font-semibold py-2.5 px-3 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-fixteal-500"
+      {/* Modern Filter Card */}
+      <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-100 shadow-soft space-y-4">
+        {/* Horizontal Category Chips */}
+        <div>
+          <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+            Filter by Trade
+          </label>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+            <button
+              type="button"
+              onClick={() => setSelectedCategory('')}
+              className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                selectedCategory === ''
+                  ? 'bg-fixblue-500 text-white shadow-md shadow-blue-500/25'
+                  : 'bg-slate-50 text-slate-700 border border-slate-200/80 hover:bg-slate-100'
+              }`}
             >
-              <option value="">All Categories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              All Trades
+            </button>
+            {categories.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setSelectedCategory(c.id === selectedCategory ? '' : c.id)}
+                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                  String(selectedCategory) === String(c.id)
+                    ? 'bg-fixblue-500 text-white shadow-md shadow-blue-500/25'
+                    : 'bg-slate-50 text-slate-700 border border-slate-200/80 hover:bg-slate-100'
+                }`}
+              >
+                {c.name}
+              </button>
+            ))}
           </div>
+        </div>
 
+        {/* Location & Controls Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-slate-100">
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              City / Location
+            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+              City / Area
             </label>
             <div className="relative">
               <input
@@ -113,75 +170,80 @@ export default function SearchTechnicians() {
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="City name"
-                className="block w-full pl-8 pr-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-fixteal-500"
+                className="block w-full pl-8 pr-3 py-2 text-xs font-semibold rounded-full border border-slate-200 bg-slate-50/50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-fixblue-400"
               />
-              <MapPin className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3" />
+              <MapPin className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
             </div>
           </div>
 
           <div>
-            <div className="flex justify-between items-center mb-1.5">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Radius: {radiusKm} km
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                Max Distance: {radiusKm} km
               </label>
             </div>
             <input
               type="range"
-              min="2"
+              min="5"
               max="50"
-              step="1"
+              step="5"
               value={radiusKm}
               onChange={(e) => setRadiusKm(Number(e.target.value))}
-              className="w-full accent-fixteal-600 cursor-pointer mt-2"
+              className="w-full accent-fixblue-500 cursor-pointer mt-1"
             />
           </div>
 
-          <div className="flex flex-col justify-end">
-            <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-700 py-2">
+          <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-4">
+            <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-700">
               <input
                 type="checkbox"
                 checked={onlyOnline}
                 onChange={(e) => setOnlyOnline(e.target.checked)}
-                className="rounded border-slate-300 text-fixteal-600 focus:ring-fixteal-500"
+                className="rounded border-slate-300 text-fixblue-500 focus:ring-fixblue-400"
               />
-              <span>Online Now Only</span>
+              <span>Online Now</span>
             </label>
-          </div>
-        </div>
 
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-          <span className="text-xs text-slate-400">
-            Found {technicians.length} qualified specialists
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            icon={RefreshCw}
-            onClick={searchNearby}
-          >
-            Refresh List
-          </Button>
+            <button
+              type="button"
+              onClick={searchNearby}
+              className="px-4 py-2 rounded-full border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 shadow-2xs transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Refresh</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Results Grid */}
+      {/* Results Section */}
       {loading ? (
-        <Spinner size="lg" label="Scanning nearby technicians..." className="py-16" />
+        <Spinner size="lg" label="Scanning verified technicians nearby..." className="py-16" />
       ) : technicians.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="No technicians found matching criteria"
-          description="Try broadening your search radius or selecting a different service category."
-          actionLabel="Reset Radius to 25 km"
+          title="No technicians found nearby"
+          description="Try increasing your search distance or selecting another category."
+          actionLabel="Reset to 35 km"
           onAction={() => {
-            setRadiusKm(25);
+            setRadiusKm(35);
             setSelectedCategory('');
           }}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div
+          className={
+            viewMode === 'horizontal'
+              ? 'space-y-4'
+              : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'
+          }
+        >
           {technicians.map((tech) => (
-            <TechnicianCard key={tech.id} technician={tech} />
+            <TechnicianCard
+              key={tech.id}
+              technician={tech}
+              variant={viewMode}
+            />
           ))}
         </div>
       )}
