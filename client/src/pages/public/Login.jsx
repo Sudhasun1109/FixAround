@@ -5,7 +5,7 @@ import { ROLES } from '../../utils/constants';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import { showToast } from '../../components/common/Toast';
-import { LogIn, Lock, Mail, Wrench, ShieldCheck, User } from 'lucide-react';
+import { LogIn, Lock, Mail, Wrench, ShieldCheck, User, Sparkles, ArrowRight } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 
 export default function Login() {
@@ -88,34 +88,33 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-12rem)] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-12rem)] flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <Link to="/" className="inline-flex items-center gap-2 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-fixblue-800 flex items-center justify-center text-white shadow-md">
-            <Wrench className="w-5 h-5 text-fixteal-400" />
+          <div className="w-11 h-11 rounded-2xl bg-fixblue-500 flex items-center justify-center text-white shadow-md shadow-blue-500/25">
+            <Wrench className="w-5 h-5 text-white" />
           </div>
-          <span className="text-2xl font-extrabold text-fixblue-900">
-            Fix<span className="text-fixteal-600">Around</span>
+          <span className="text-2xl font-extrabold text-[#172033] tracking-tight">
+            Fix<span className="text-fixblue-500">Around</span>
           </span>
         </Link>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-[#172033] tracking-tight">
           Sign In to Your Account
         </h2>
-        <p className="mt-2 text-xs text-slate-500">
-          Access your bookings, active jobs, or manage the platform
+        <p className="mt-1 text-xs sm:text-sm text-slate-500 font-medium">
+          Access your bookings, track emergency technicians, or manage orders.
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-6 shadow-xl rounded-3xl sm:px-10 border border-slate-200">
+      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-6 shadow-card rounded-3xl sm:px-10 border border-slate-100">
           {error && (
-            <div className="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium">
+            <div className="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            
             <Input
               label="Email Address"
               type="email"
@@ -139,24 +138,22 @@ export default function Login() {
             />
 
             <div className="pt-2">
-              <Button
+              <button
                 type="submit"
-                variant="primary"
-                size="lg"
-                fullWidth
-                loading={loading}
-                icon={LogIn}
+                disabled={loading}
+                className="w-full py-3.5 rounded-full bg-fixblue-500 hover:bg-fixblue-600 active:scale-95 text-white font-extrabold text-sm shadow-md shadow-blue-500/30 transition-all flex items-center justify-center gap-2"
               >
-                Sign In
-              </Button>
+                <LogIn className="w-4 h-4" />
+                <span>{loading ? 'Signing in...' : 'Sign In'}</span>
+              </button>
             </div>
 
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200" />
+                <div className="w-full border-t border-slate-100" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-3 text-slate-400 font-semibold tracking-wider">
+                <span className="bg-white px-3 text-slate-400 font-bold tracking-wider">
                   Or continue with
                 </span>
               </div>
@@ -167,40 +164,39 @@ export default function Login() {
                 onSuccess={handleGoogleSuccess}
                 onError={handleGoogleError}
                 useOneTap={false}
-                shape="rectangular"
+                shape="pill"
                 theme="outline"
                 size="large"
                 width="100%"
                 text="continue_with"
               />
             </div>
-
           </form>
-          
-          {/* Quick Demo Logins for Testing */}
+
+          {/* Quick Demo Logins for Evaluator / Testing */}
           <div className="mt-6 pt-5 border-t border-slate-100">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block text-center mb-2.5">
-              Quick Test Accounts
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block text-center mb-2.5">
+              Quick Test Credentials
             </span>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => fillCredentials('priya.sharma@example.com', 'Customer')}
-                className="py-1.5 px-2 rounded-lg bg-slate-50 hover:bg-slate-100 text-[11px] font-semibold text-slate-700 border border-slate-200 transition-colors"
+                className="py-1.5 px-2 rounded-full bg-slate-50 hover:bg-slate-100 text-[11px] font-semibold text-slate-700 border border-slate-200 transition-colors"
               >
                 Customer
               </button>
               <button
                 type="button"
                 onClick={() => fillCredentials('suresh.electrician@example.com', 'Technician')}
-                className="py-1.5 px-2 rounded-lg bg-teal-50 hover:bg-teal-100 text-[11px] font-semibold text-fixteal-800 border border-teal-200 transition-colors"
+                className="py-1.5 px-2 rounded-full bg-blue-50 hover:bg-blue-100 text-[11px] font-bold text-fixblue-600 border border-blue-200 transition-colors"
               >
                 Technician
               </button>
               <button
                 type="button"
                 onClick={() => fillCredentials('admin@fixaround.com', 'Admin')}
-                className="py-1.5 px-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-[11px] font-semibold text-fixblue-900 border border-indigo-200 transition-colors"
+                className="py-1.5 px-2 rounded-full bg-slate-100 hover:bg-slate-200 text-[11px] font-bold text-slate-900 border border-slate-300 transition-colors"
               >
                 Admin
               </button>
@@ -209,16 +205,23 @@ export default function Login() {
 
           {/* Registration Links */}
           <div className="mt-6 text-center space-y-2 text-xs">
-            <p className="text-slate-500">
+            <p className="text-slate-500 font-medium">
               Don't have an account?{' '}
-              <Link to="/register" className="font-bold text-fixteal-600 hover:text-fixteal-700">
+              <Link to="/register" className="font-bold text-fixblue-500 hover:text-fixblue-600">
                 Sign up as Customer
               </Link>
             </p>
-            <p className="text-slate-500">
-              Are you a service technician?{' '}
-              <Link to="/register-technician" className="font-bold text-fixblue-800 hover:text-fixblue-950">
+            <p className="text-slate-500 font-medium">
+              Are you a service professional?{' '}
+              <Link to="/register-technician" className="font-bold text-slate-700 hover:text-fixblue-500">
                 Join our expert network
+              </Link>
+            </p>
+            <p className="text-slate-400 font-medium pt-2 border-t border-slate-100">
+              Platform administrator?{' '}
+              <Link to="/admin/login" className="font-bold text-fixblue-500 hover:text-fixblue-600 inline-flex items-center gap-1">
+                <span>Access Admin Portal</span>
+                <ArrowRight className="w-3 h-3" />
               </Link>
             </p>
           </div>

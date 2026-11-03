@@ -2,47 +2,49 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from '../components/navigation/Navbar';
 import Sidebar from '../components/navigation/Sidebar';
+import MobileBottomNav from '../components/navigation/MobileBottomNav';
 import { Menu, X } from 'lucide-react';
 
 export default function TechnicianLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-[#F4F7FB] text-[#172033]">
       <Navbar />
 
       {/* Mobile Drawer Toggle */}
-      <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between">
+      <div className="md:hidden bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 py-2 flex items-center justify-between sticky top-16 z-20">
         <button
           type="button"
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="inline-flex items-center gap-2 text-xs font-bold text-fixblue-900 px-3 py-1.5 rounded-lg border border-slate-200"
+          className="inline-flex items-center gap-2 text-xs font-bold text-fixblue-900 px-3 py-1.5 rounded-full border border-slate-200/90 bg-slate-50"
         >
-          {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          {sidebarOpen ? <X className="w-3.5 h-3.5" /> : <Menu className="w-3.5 h-3.5" />}
           <span>Technician Menu</span>
         </button>
+        <span className="text-xs font-medium text-slate-400">Pro Portal</span>
       </div>
 
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
+      <div className="flex-1 flex max-w-7xl w-full mx-auto pb-24 md:pb-8">
         {/* Desktop Sidebar */}
         <Sidebar className="hidden md:flex" />
 
         {/* Mobile Drawer */}
         {sidebarOpen && (
-          <div className="fixed inset-0 z-40 md:hidden flex">
+          <div className="fixed inset-0 z-50 md:hidden flex">
             <div
-              className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs"
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs"
               onClick={() => setSidebarOpen(false)}
             />
-            <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white z-50">
-              <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-                <span className="font-bold text-slate-800">Technician Menu</span>
+            <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white z-50 shadow-2xl">
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                <span className="font-bold text-slate-800 text-sm">Technician Menu</span>
                 <button
                   type="button"
                   onClick={() => setSidebarOpen(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
+                  className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto">
@@ -57,6 +59,8 @@ export default function TechnicianLayout({ children }) {
           {children || <Outlet />}
         </main>
       </div>
+
+      <MobileBottomNav />
     </div>
   );
 }

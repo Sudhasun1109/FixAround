@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   MapPin,
   RefreshCw,
+  Download,
 } from 'lucide-react';
 
 export default function BookingMonitoring() {
@@ -109,6 +110,35 @@ export default function BookingMonitoring() {
     }
   };
 
+  // Export to CSV helper
+  const handleExportCSV = () => {
+    if (!bookings.length) {
+      showToast.error('No bookings to export');
+      return;
+    }
+    const headers = ['Booking ID', 'Booking #', 'Category', 'Customer', 'Technician', 'Status', 'Total (INR)', 'Scheduled At', 'Created At'];
+    const rows = bookings.map(b => [
+      b.id,
+      `"${b.booking_number || 'BK-' + b.id}"`,
+      `"${b.category_name || b.service_name || 'General'}"`,
+      `"${b.customer_name || 'Customer'}"`,
+      `"${b.technician_name || 'Unassigned'}"`,
+      b.status,
+      b.final_cost || b.estimated_cost || 0,
+      `"${b.scheduled_at || ''}"`,
+      `"${b.created_at || ''}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `fixaround_bookings_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast.success('Bookings report exported to CSV');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -124,14 +154,24 @@ export default function BookingMonitoring() {
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          icon={RefreshCw}
-          onClick={fetchBookings}
-        >
-          Refresh Feed
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Download}
+            onClick={handleExportCSV}
+          >
+            Export CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={RefreshCw}
+            onClick={fetchBookings}
+          >
+            Refresh Feed
+          </Button>
+        </div>
       </div>
 
       {/* Filter Toolbar */}

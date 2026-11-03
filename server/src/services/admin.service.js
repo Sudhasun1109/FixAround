@@ -44,6 +44,17 @@ async function getDashboardStats() {
      FROM payments`
   );
 
+  const [serviceStats] = await pool.query(
+    `SELECT COUNT(*) AS total_services FROM service_categories WHERE is_active = 1`
+  );
+
+  const [bookingStats2] = await pool.query(
+    `SELECT 
+       COUNT(CASE WHEN status IN ('REQUESTED', 'ASSIGNED') THEN 1 END) AS pending_bookings,
+       COUNT(CASE WHEN status = 'ACCEPTED' THEN 1 END) AS accepted_bookings
+     FROM bookings`
+  );
+
   const [claimStats] = await pool.query(
     `SELECT 
        COUNT(*) AS total_claims,
@@ -64,12 +75,49 @@ async function getDashboardStats() {
      LIMIT 8`
   );
 
+  const [recentCustomers] = await pool.query(
+    `SELECT id, first_name, last_name, email, phone, created_at, is_active
+     FROM users 
+     WHERE role = 'customer' 
+     ORDER BY created_at DESC 
+     LIMIT 5`
+  );
+
+  const [recentTechnicians] = await pool.query(
+    `SELECT u.id, u.first_name, u.last_name, u.email, u.phone, tp.service_city, tp.verification_status, tp.avg_rating, u.created_at, u.is_active
+     FROM users u 
+     LEFT JOIN technician_profiles tp ON tp.user_id = u.id 
+     WHERE u.role = 'technician' 
+     ORDER BY u.created_at DESC 
+     LIMIT 5`
+  );
+
+  const [popularCategories] = await pool.query(
+    `SELECT sc.id, sc.name, sc.slug, COUNT(b.id) AS booking_count, COALESCE(SUM(b.final_total), 0) AS total_spent
+     FROM service_categories sc
+     LEFT JOIN bookings b ON b.category_id = sc.id
+     GROUP BY sc.id, sc.name, sc.slug
+     ORDER BY booking_count DESC
+     LIMIT 5`
+  );
+
+  const [recentActivities] = await pool.query(
+    `SELECT al.*, u.first_name, u.last_name 
+     FROM audit_logs al 
+     LEFT JOIN users u ON u.id = al.actor_id 
+     ORDER BY al.created_at DESC 
+     LIMIT 6`
+  );
+
   return {
     total_users: userStats[0]?.total_users || 0,
     total_customers: userStats[0]?.total_customers || 0,
     total_technicians: userStats[0]?.total_technicians || 0,
+    total_services: serviceStats[0]?.total_services || 8,
     active_users: userStats[0]?.active_users || 0,
     total_bookings: bookingStats[0]?.total_bookings || 0,
+    pending_bookings: bookingStats2[0]?.pending_bookings || 0,
+    accepted_bookings: bookingStats2[0]?.accepted_bookings || 0,
     completed_bookings: bookingStats[0]?.completed_bookings || 0,
     active_bookings: bookingStats[0]?.active_bookings || 0,
     cancelled_bookings: bookingStats[0]?.cancelled_bookings || 0,
@@ -83,6 +131,10 @@ async function getDashboardStats() {
     total_claims: claimStats[0]?.total_claims || 0,
     open_claims: claimStats[0]?.open_claims || 0,
     recent_bookings: recentBookings || [],
+    recent_customers: recentCustomers || [],
+    recent_technicians: recentTechnicians || [],
+    popular_categories: popularCategories || [],
+    recent_activities: recentActivities || [],
     users: userStats[0],
     technicians: techStats[0],
     bookings: bookingStats[0],

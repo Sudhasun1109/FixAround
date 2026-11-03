@@ -1,3 +1,4 @@
+const pinHelper = require('../utils/pin.helper');
 const bookingRepo = require('../repositories/booking.repository');
 const serviceRepo = require('../repositories/service.repository');
 const userRepo = require('../repositories/user.repository');
@@ -336,6 +337,342 @@ async function getTimeline(bookingId, currentUser) {
   return await bookingRepo.getStatusHistory(bookingId);
 }
 
+
+/**
+ * Generate 4-digit completion PIN (Technician only)
+ * Sets status to AWAITING_CUSTOMER_VERIFICATION
+ */
+async function generatePin(bookingId, currentUser) {
+  const booking = await bookingRepo.findById(bookingId);
+  if (!booking) {
+    throw AppError.notFound('Booking not found');
+  }
+
+  // Authorization: must be assigned technician or admin
+  if (currentUser.role === ROLES.TECHNICIAN && booking.technician_id !== currentUser.id) {
+    throw AppError.forbidden('You are not the assigned technician for this booking');
+  }
+
+  // Verify status is IN_PROGRESS or ARRIVED or already AWAITING_CUSTOMER_VERIFICATION
+  const allowedStatuses = [
+    BOOKING_STATUSES.IN_PROGRESS,
+    BOOKING_STATUSES.ARRIVED,
+    BOOKING_STATUSES.AWAITING_CUSTOMER_VERIFICATION
+  ];
+  if (!allowedStatuses.includes(booking.status)) {
+    throw AppError.badRequest(`Cannot generate completion PIN from current status '${booking.status}'. Service must be IN_PROGRESS.`);
+  }
+
+  const { pin, packedHash } = pinHelper.generateCompletionPin(bookingId);
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    await conn.query(
+      `UPDATE bookings 
+       SET verification_pin_hash = ?, 
+           pin_expires_at = ?, 
+           pin_attempt_count = 0, 
+           status = ? 
+       WHERE id = ?`,
+      [packedHash, expiresAt, BOOKING_STATUSES.AWAITING_CUSTOMER_VERIFICATION, bookingId]
+    );
+
+    await bookingRepo.addStatusHistory({
+      booking_id: bookingId,
+      from_status: booking.status,
+      to_status: BOOKING_STATUSES.AWAITING_CUSTOMER_VERIFICATION,
+      changed_by: currentUser.id,
+      actor_role: currentUser.role,
+      notes: 'Technician generated 4-digit service completion PIN'
+    }, conn);
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+
+  // Notify customer
+  await notificationRepo.create({
+    user_id: booking.customer_id,
+    type: 'BOOKING_PIN_GENERATED',
+    title: 'Service Completion PIN Ready',
+    message: `Your technician has completed service for booking #${booking.booking_number}. Check your booking details to view your 4-digit verification PIN.`,
+    data: { bookingId }
+  });
+
+  // Security: Never reveal the plain PIN to the technician
+  return {
+    bookingId,
+    status: BOOKING_STATUSES.AWAITING_CUSTOMER_VERIFICATION,
+    expires_at: expiresAt,
+    message: 'Completion PIN generated successfully. Customer must now share their PIN with you.'
+  };
+}
+
+/**
+ * Get 4-digit verification PIN (Customer only)
+ */
+async function getVerificationPin(bookingId, currentUser) {
+  const booking = await bookingRepo.findById(bookingId);
+  if (!booking) {
+    throw AppError.notFound('Booking not found');
+  }
+
+  // Authorization: must be the customer who owns the booking or admin
+  if (currentUser.role === ROLES.CUSTOMER && booking.customer_id !== currentUser.id) {
+    throw AppError.forbidden('You do not have permission to view this verification PIN');
+  }
+
+  if (!booking.verification_pin_hash) {
+    return {
+      has_pin: false,
+      message: 'No completion PIN has been generated yet'
+    };
+  }
+
+  const now = new Date();
+  const expiresAt = new Date(booking.pin_expires_at);
+  const isExpired = now > expiresAt;
+  const secondsLeft = isExpired ? 0 : Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
+
+  if (isExpired) {
+    return {
+      has_pin: true,
+      is_expired: true,
+      expires_at: booking.pin_expires_at,
+      seconds_left: 0,
+      message: 'Verification PIN has expired. Ask your technician to regenerate.'
+    };
+  }
+
+  const plainPin = pinHelper.decryptPin(booking.verification_pin_hash);
+
+  return {
+    has_pin: true,
+    is_expired: false,
+    pin: plainPin,
+    expires_at: booking.pin_expires_at,
+    seconds_left: secondsLeft
+  };
+}
+
+/**
+ * Verify 4-digit customer PIN (Technician only)
+ * Sets status to VERIFIED
+ */
+async function verifyPin(bookingId, currentUser, inputPin) {
+  const booking = await bookingRepo.findById(bookingId);
+  if (!booking) {
+    throw AppError.notFound('Booking not found');
+  }
+
+  // Authorization: must be assigned technician or admin
+  if (currentUser.role === ROLES.TECHNICIAN && booking.technician_id !== currentUser.id) {
+    throw AppError.forbidden('You are not the assigned technician for this booking');
+  }
+
+  if (booking.status !== BOOKING_STATUSES.AWAITING_CUSTOMER_VERIFICATION) {
+    throw AppError.badRequest(`Booking is not awaiting customer verification (current status: ${booking.status})`);
+  }
+
+  if (!booking.verification_pin_hash) {
+    throw AppError.badRequest('No active PIN found on this booking');
+  }
+
+  // Check attempt count
+  if (booking.pin_attempt_count >= 5) {
+    throw AppError.badRequest('Maximum verification attempts exceeded (5/5). Please regenerate PIN.');
+  }
+
+  // Check expiration
+  if (new Date() > new Date(booking.pin_expires_at)) {
+    throw AppError.badRequest('Verification PIN has expired. Please regenerate PIN.');
+  }
+
+  const isMatch = pinHelper.verifyPin(inputPin, bookingId, booking.verification_pin_hash);
+
+  if (!isMatch) {
+    await pool.query(
+      `UPDATE bookings SET pin_attempt_count = pin_attempt_count + 1 WHERE id = ?`,
+      [bookingId]
+    );
+    const remaining = 5 - (booking.pin_attempt_count + 1);
+    throw AppError.badRequest(`Invalid 4-digit PIN. ${remaining} attempt(s) remaining.`);
+  }
+
+  // PIN is correct! Update booking to VERIFIED
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    await conn.query(
+      `UPDATE bookings 
+       SET pin_verified_at = UTC_TIMESTAMP(), 
+           verification_pin_hash = NULL, 
+           status = ? 
+       WHERE id = ?`,
+      [BOOKING_STATUSES.VERIFIED, bookingId]
+    );
+
+    await bookingRepo.addStatusHistory({
+      booking_id: bookingId,
+      from_status: BOOKING_STATUSES.AWAITING_CUSTOMER_VERIFICATION,
+      to_status: BOOKING_STATUSES.VERIFIED,
+      changed_by: currentUser.id,
+      actor_role: currentUser.role,
+      notes: 'Customer 4-digit PIN verified successfully'
+    }, conn);
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+
+  // Notify customer
+  await notificationRepo.create({
+    user_id: booking.customer_id,
+    type: 'BOOKING_VERIFIED',
+    title: 'Service Verified',
+    message: `Your technician verified your completion PIN. You may now proceed to final payment.`,
+    data: { bookingId }
+  });
+
+  return {
+    bookingId,
+    status: BOOKING_STATUSES.VERIFIED,
+    message: '4-digit PIN verified successfully! Proceed to payment.'
+  };
+}
+
+/**
+ * Process booking payment and mark COMPLETED
+ */
+async function processPayment(bookingId, currentUser, paymentData = {}) {
+  const booking = await bookingRepo.findById(bookingId);
+  if (!booking) {
+    throw AppError.notFound('Booking not found');
+  }
+
+  // Check authorization
+  const isOwner = currentUser.role === ROLES.CUSTOMER && booking.customer_id === currentUser.id;
+  const isAssignedTech = currentUser.role === ROLES.TECHNICIAN && booking.technician_id === currentUser.id;
+  const isAdmin = currentUser.role === ROLES.ADMIN;
+
+  if (!isOwner && !isAssignedTech && !isAdmin) {
+    throw AppError.forbidden('You do not have permission to record payment for this booking');
+  }
+
+  const allowableStatuses = [
+    BOOKING_STATUSES.VERIFIED,
+    BOOKING_STATUSES.PAYMENT_PENDING,
+    BOOKING_STATUSES.IN_PROGRESS,
+    BOOKING_STATUSES.COMPLETED
+  ];
+
+  if (!allowableStatuses.includes(booking.status)) {
+    throw AppError.badRequest(`Cannot process payment for booking with status '${booking.status}'. Service must be verified.`);
+  }
+
+  const paymentMethod = paymentData.payment_method || 'CASH';
+  const amount = parseFloat(paymentData.amount || booking.final_total || booking.estimated_total || 500);
+  const commissionRate = 15.00;
+  const commissionAmount = parseFloat((amount * 0.15).toFixed(2));
+  const technicianPayout = parseFloat((amount * 0.85).toFixed(2));
+  const paymentNumber = 'PAY-' + Date.now();
+
+  const conn = await pool.getConnection();
+  let paymentId;
+  try {
+    await conn.beginTransaction();
+
+    // 1. Insert into payments
+    const [pResult] = await conn.query(
+      `INSERT INTO payments (
+        payment_number, booking_id, customer_id, amount, payment_method, status, paid_at
+      ) VALUES (?, ?, ?, ?, ?, 'SUCCESS', UTC_TIMESTAMP())`,
+      [paymentNumber, bookingId, booking.customer_id, amount, paymentMethod]
+    );
+    paymentId = pResult.insertId;
+
+    // 2. Update booking
+    await conn.query(
+      `UPDATE bookings 
+       SET status = ?, 
+           payment_method = ?, 
+           payment_status = 'PAID', 
+           final_total = ?, 
+           commission_amount = ?, 
+           technician_payout = ?, 
+           completed_at = UTC_TIMESTAMP() 
+       WHERE id = ?`,
+      [BOOKING_STATUSES.COMPLETED, paymentMethod, amount, commissionAmount, technicianPayout, bookingId]
+    );
+
+    // 3. Status history
+    await bookingRepo.addStatusHistory({
+      booking_id: bookingId,
+      from_status: booking.status,
+      to_status: BOOKING_STATUSES.COMPLETED,
+      changed_by: currentUser.id,
+      actor_role: currentUser.role,
+      notes: `Payment of ₹${amount} confirmed via ${paymentMethod}. Service marked COMPLETED.`
+    }, conn);
+
+    // 4. Update technician profile completed_jobs
+    if (booking.technician_id) {
+      await conn.query(
+        `UPDATE technician_profiles SET completed_jobs = completed_jobs + 1 WHERE user_id = ?`,
+        [booking.technician_id]
+      );
+
+      // 5. Insert into technician_earnings
+      await conn.query(
+        `INSERT INTO technician_earnings (
+          technician_id, booking_id, payment_id, gross_amount, commission_rate, commission_amount, net_amount, settlement_status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
+        [booking.technician_id, bookingId, paymentId, amount, commissionRate, commissionAmount, technicianPayout]
+      );
+    }
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+
+  // Notifications
+  await notificationRepo.create({
+    user_id: booking.customer_id,
+    type: 'PAYMENT_SUCCESS',
+    title: 'Payment Confirmed',
+    message: `Payment of ₹${amount} confirmed for booking #${booking.booking_number}. Thank you for using FixAround!`,
+    data: { bookingId, paymentId }
+  });
+
+  if (booking.technician_id) {
+    await notificationRepo.create({
+      user_id: booking.technician_id,
+      type: 'PAYMENT_SUCCESS',
+      title: 'Payment Received',
+      message: `Payment confirmed for booking #${booking.booking_number}. Net payout ₹${technicianPayout} queued for settlement.`,
+      data: { bookingId, paymentId }
+    });
+  }
+
+  return await bookingRepo.findById(bookingId);
+}
+
 module.exports = {
   create,
   getById,
@@ -344,5 +681,9 @@ module.exports = {
   updateStatus,
   assignTechnician,
   getAll,
-  getTimeline
+  getTimeline,
+  generatePin,
+  getVerificationPin,
+  verifyPin,
+  processPayment
 };

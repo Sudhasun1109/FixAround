@@ -20,6 +20,9 @@ import {
   ShieldCheck,
   Save,
   Wrench,
+  Key,
+  Check,
+  X,
 } from 'lucide-react';
 
 export default function ActiveJob() {
@@ -32,6 +35,12 @@ export default function ActiveJob() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [notes, setNotes] = useState('');
+  const [inputPin, setInputPin] = useState('');
+  const [generatingPin, setGeneratingPin] = useState(false);
+  const [verifyingPin, setVerifyingPin] = useState(false);
+  const [techPayMethod, setTechPayMethod] = useState('CASH');
+  const [techPayAmount, setTechPayAmount] = useState('500');
+  const [processingPay, setProcessingPay] = useState(false);
 
   const fetchJob = useCallback(async () => {
     try {
@@ -40,6 +49,7 @@ export default function ActiveJob() {
       const data = res?.data?.booking || res?.data || res;
       setBooking(data);
       setNotes(data.notes || '');
+      setTechPayAmount(String(data.final_total || data.estimated_total || 500));
 
       // Load timeline
       try {
@@ -101,6 +111,81 @@ export default function ActiveJob() {
       showToast.error(err.message || 'Status transition failed');
     } finally {
       setUpdating(false);
+    }
+  };
+
+
+  const handleAccept = async () => {
+    try {
+      setUpdating(true);
+      await bookingsApi.accept(id);
+      showToast.success('Job confirmed! Proceed to customer location.');
+      fetchJob();
+    } catch (err) {
+      showToast.error(err.message || 'Failed to accept job');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      setUpdating(true);
+      await bookingsApi.reject(id, 'Declined by technician');
+      showToast.info('Job declined.');
+      navigate('/technician/requests');
+    } catch (err) {
+      showToast.error(err.message || 'Failed to decline job');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleGeneratePin = async () => {
+    try {
+      setGeneratingPin(true);
+      await bookingsApi.generatePin(id);
+      showToast.success('4-Digit completion PIN generated! Ask customer for their PIN.');
+      fetchJob();
+    } catch (err) {
+      showToast.error(err.message || 'Failed to generate PIN');
+    } finally {
+      setGeneratingPin(false);
+    }
+  };
+
+  const handleVerifyPin = async () => {
+    if (!inputPin || inputPin.length !== 4) {
+      showToast.error('Please enter the 4-digit PIN provided by customer');
+      return;
+    }
+    try {
+      setVerifyingPin(true);
+      await bookingsApi.verifyPin(id, inputPin);
+      showToast.success('Customer PIN verified successfully! Proceed to payment.');
+      setInputPin('');
+      fetchJob();
+    } catch (err) {
+      showToast.error(err.message || 'Invalid PIN verification');
+    } finally {
+      setVerifyingPin(false);
+    }
+  };
+
+  const handleTechConfirmPayment = async () => {
+    try {
+      setProcessingPay(true);
+      await bookingsApi.processPayment(id, {
+        payment_method: techPayMethod,
+        amount: parseFloat(techPayAmount) || 500,
+        notes: `Technician confirmed ${techPayMethod} collection`
+      });
+      showToast.success('Payment confirmed and job marked COMPLETED!');
+      fetchJob();
+    } catch (err) {
+      showToast.error(err.message || 'Failed to confirm payment');
+    } finally {
+      setProcessingPay(false);
     }
   };
 
@@ -185,6 +270,32 @@ export default function ActiveJob() {
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {booking.status === 'REQUESTED' && (
+            <>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                loading={updating}
+                icon={Check}
+                onClick={handleAccept}
+              >
+                Accept Booking Request
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                fullWidth
+                loading={updating}
+                icon={X}
+                onClick={handleReject}
+                className="text-rose-600 border-rose-200 hover:bg-rose-50"
+              >
+                Decline Request
+              </Button>
+            </>
+          )}
+
           {booking.status === 'ACCEPTED' && (
             <Button
               variant="primary"
@@ -261,15 +372,105 @@ export default function ActiveJob() {
                 </Button>
               )}
               <Button
-                variant="secondary"
+                variant="primary"
                 size="lg"
                 fullWidth
-                icon={CheckCircle2}
-                onClick={() => navigate(`/technician/jobs/${booking.id}/complete`)}
+                loading={generatingPin}
+                icon={Key}
+                onClick={handleGeneratePin}
               >
-                Complete Job & Finalize Billing
+                Complete Work & Generate PIN
               </Button>
             </>
+          )}
+
+          {booking.status === 'AWAITING_CUSTOMER_VERIFICATION' && (
+            <div className="col-span-full p-6 rounded-3xl bg-indigo-50/80 border-2 border-indigo-200 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-indigo-900 font-extrabold text-sm">
+                  <Key className="w-5 h-5 text-indigo-600" />
+                  <span>Verify Customer Completion PIN</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={generatingPin}
+                  onClick={handleGeneratePin}
+                >
+                  Regenerate PIN
+                </Button>
+              </div>
+
+              <p className="text-xs text-slate-600">
+                Enter the four-digit PIN shared by the customer to verify the completed service.
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <input
+                  type="text"
+                  maxLength="4"
+                  value={inputPin}
+                  onChange={(e) => setInputPin(e.target.value.replace(/\D/g, ''))}
+                  placeholder="0000"
+                  className="w-36 text-center tracking-widest text-2xl font-mono font-extrabold py-3 px-4 rounded-2xl border-2 border-indigo-300 bg-white text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                />
+                <Button
+                  variant="primary"
+                  size="md"
+                  loading={verifyingPin}
+                  disabled={inputPin.length !== 4}
+                  onClick={handleVerifyPin}
+                >
+                  Verify PIN & Confirm Work
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {booking.status === 'VERIFIED' && (
+            <div className="col-span-full p-6 rounded-3xl bg-teal-50 border-2 border-teal-300 space-y-4">
+              <div className="flex items-center gap-2 text-teal-900 font-extrabold text-sm">
+                <CheckCircle2 className="w-5 h-5 text-teal-600" />
+                <span>Customer PIN Verified – Record Final Payment</span>
+              </div>
+              <p className="text-xs text-slate-600">
+                Select how the customer paid to complete the job and record your earnings.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Method</label>
+                  <select
+                    value={techPayMethod}
+                    onChange={(e) => setTechPayMethod(e.target.value)}
+                    className="w-full text-xs font-bold py-2.5 px-3 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-fixteal-500"
+                  >
+                    <option value="CASH">Cash on Service</option>
+                    <option value="UPI">UPI / QR Code</option>
+                    <option value="ONLINE">Online Gateway</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Final Amount (₹)</label>
+                  <input
+                    type="number"
+                    value={techPayAmount}
+                    onChange={(e) => setTechPayAmount(e.target.value)}
+                    className="w-full text-xs font-bold py-2.5 px-3 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-fixteal-500"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    variant="primary"
+                    size="md"
+                    fullWidth
+                    loading={processingPay}
+                    onClick={handleTechConfirmPayment}
+                  >
+                    Confirm Payment & Finish
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
 
           {booking.status === 'COMPLETED' && (

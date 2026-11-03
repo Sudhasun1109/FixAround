@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { bookingsApi, customerApi } from '../../services/api';
+import { bookingsApi, customerApi, techniciansApi } from '../../services/api';
 import StatsCard from '../../components/common/StatsCard';
 import BookingCard from '../../components/booking/BookingCard';
+import TechnicianCard from '../../components/technician/TechnicianCard';
 import EmptyState from '../../components/common/EmptyState';
 import Spinner from '../../components/common/Spinner';
 import Button from '../../components/common/Button';
@@ -21,6 +22,8 @@ import {
   Wallet,
   ArrowUpRight,
   Sparkles,
+  Wrench,
+  ChevronRight,
 } from 'lucide-react';
 
 export default function CustomerDashboard() {
@@ -29,15 +32,17 @@ export default function CustomerDashboard() {
 
   const [bookings, setBookings] = useState([]);
   const [wallet, setWallet] = useState({ wallet_balance: user?.wallet_balance || 0, transactions: [] });
+  const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [bookRes, walletRes] = await Promise.allSettled([
+        const [bookRes, walletRes, techRes] = await Promise.allSettled([
           bookingsApi.getMyBookings({ limit: 10 }),
           customerApi.getWallet(),
+          techniciansApi.getAll({ limit: 3 }),
         ]);
 
         if (bookRes.status === 'fulfilled') {
@@ -52,6 +57,11 @@ export default function CustomerDashboard() {
             transactions: Array.isArray(wData.transactions) ? wData.transactions : [],
           });
         }
+
+        if (techRes.status === 'fulfilled') {
+          const tList = techRes.value?.data?.technicians || techRes.value?.data || [];
+          setTechnicians(Array.isArray(tList) ? tList.slice(0, 3) : []);
+        }
       } catch (err) {
         console.error('Failed to load customer dashboard data:', err);
       } finally {
@@ -63,56 +73,56 @@ export default function CustomerDashboard() {
   }, []);
 
   const activeBookings = bookings.filter(
-    (b) =>
-      !['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED'].includes(b.status)
+    (b) => !['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED'].includes(b.status)
   );
 
   const completedBookings = bookings.filter((b) => b.status === 'COMPLETED');
 
-  const pendingPayments = bookings.filter(
-    (b) => b.status === 'COMPLETED' && (!b.payment_status || b.payment_status === 'PENDING')
-  );
-
   return (
-    <div className="space-y-8">
-      {/* Welcome & Quick Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
+    <div className="max-w-5xl mx-auto space-y-7">
+      {/* 1. WELCOME & QUICK ACTIONS BANNER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-soft">
         <div>
-          <span className="text-xs font-bold text-fixteal-600 uppercase tracking-wider">
+          <span className="text-xs font-bold text-fixblue-500 uppercase tracking-wider">
             Customer Dashboard
           </span>
-          <h1 className="text-2xl font-extrabold text-fixblue-900 mt-0.5">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#172033] tracking-tight mt-0.5">
             Welcome back, {user?.first_name || 'Neighbor'}!
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Track active repair jobs, approve quotes, and view warranties.
+          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+            Track active repair dispatches, approve quotes, and view warranties.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <Link to="/customer/book">
-            <Button variant="primary" size="md" icon={Plus}>
-              New Booking
-            </Button>
+          <Link
+            to="/customer/book"
+            className="px-5 py-2.5 rounded-full bg-fixblue-500 hover:bg-fixblue-600 text-white font-bold text-xs shadow-md shadow-blue-500/25 flex items-center gap-1.5 active:scale-95 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Booking</span>
           </Link>
-          <Link to="/customer/emergency">
-            <Button variant="emergency" size="md" icon={AlertTriangle}>
-              Emergency (30m)
-            </Button>
+
+          <Link
+            to="/customer/emergency"
+            className="px-5 py-2.5 rounded-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-extrabold text-xs shadow-md shadow-rose-900/25 flex items-center gap-1.5 active:scale-95 transition-all animate-pulse"
+          >
+            <AlertTriangle className="w-4 h-4 text-amber-200" />
+            <span>Emergency (2-Min)</span>
           </Link>
         </div>
       </div>
 
-      {/* Metrics / Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* 2. STATS & WALLET ROW */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        {/* Wallet Pill Card */}
         <Link
           to="/customer/wallet"
-          className="bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white p-5 rounded-3xl shadow-sm flex flex-col justify-between relative overflow-hidden group transition-all"
+          className="bg-gradient-to-br from-fixblue-500 to-fixblue-600 hover:from-fixblue-600 hover:to-fixblue-700 text-white p-5 rounded-3xl shadow-card flex flex-col justify-between relative overflow-hidden group transition-all"
         >
-          <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-100 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-100 flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
               FixAround Wallet
             </span>
             <div className="p-2 bg-white/20 rounded-xl group-hover:scale-110 transition-transform">
@@ -120,141 +130,121 @@ export default function CustomerDashboard() {
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-3xl font-extrabold tracking-tight">
+            <div className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               {formatCurrency(wallet.wallet_balance)}
             </div>
-            <p className="text-[11px] text-emerald-100 mt-1 flex items-center justify-between">
+            <p className="text-[11px] text-blue-100 mt-1 flex items-center justify-between">
               <span>● Active Balance</span>
-              <span className="underline underline-offset-2">View & Topup →</span>
+              <span className="underline underline-offset-2">Topup &rarr;</span>
             </p>
           </div>
         </Link>
 
         <StatsCard
-          label="Active Jobs"
+          label="Active Repairs"
           value={activeBookings.length}
           icon={Clock}
           color="blue"
-          subtitle={activeBookings.length > 0 ? 'Currently in progress' : 'No active repairs'}
+          subtitle={activeBookings.length > 0 ? 'Technician dispatched' : 'No active dispatches'}
         />
 
         <StatsCard
-          label="Completed Repairs"
+          label="Completed Services"
           value={completedBookings.length}
           icon={CheckCircle2}
           color="green"
-          subtitle="Backed by FixAround Warranty"
+          subtitle="Protected by warranty"
         />
 
         <StatsCard
-          label="Action Required"
-          value={pendingPayments.length}
-          icon={CreditCard}
-          color={pendingPayments.length > 0 ? 'amber' : 'teal'}
-          subtitle={pendingPayments.length > 0 ? 'Pending payment checkout' : 'All accounts settled'}
+          label="Total Bookings"
+          value={bookings.length}
+          icon={Calendar}
+          color="purple"
+          subtitle="All-time history"
         />
       </div>
 
-      {/* Wallet Activity / Refund History */}
-      {wallet.transactions && wallet.transactions.length > 0 && (
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center justify-between mb-3">
+      {/* 3. ACTIVE BOOKINGS ALERT / BANNER */}
+      {activeBookings.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-emerald-600" />
-              <h3 className="text-sm font-bold text-fixblue-900">Wallet Activity & Refunds</h3>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                Ongoing Repairs & Live Tracking ({activeBookings.length})
+              </h2>
             </div>
             <Link
-              to="/customer/wallet"
-              className="text-[11px] font-bold text-fixteal-600 hover:text-fixteal-700 flex items-center gap-1"
+              to="/customer/bookings"
+              className="text-xs font-bold text-fixblue-500 hover:text-fixblue-600"
             >
-              <span>View All & Refunds</span>
-              <ArrowRight className="w-3 h-3" />
+              View All
             </Link>
           </div>
 
-          <div className="divide-y divide-slate-100">
-            {wallet.transactions.slice(0, 3).map((tx) => (
-              <div key={tx.id} className="py-2.5 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-xl ${tx.type === 'CREDIT' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                    <ArrowUpRight className="w-3.5 h-3.5" />
+          <div className="space-y-3">
+            {activeBookings.map((b) => (
+              <div
+                key={b.id}
+                className="bg-white rounded-3xl p-5 border border-blue-100 shadow-soft hover:shadow-card transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-slate-400">
+                      #{b.booking_number || `BK-${b.id}`}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-fixblue-600 text-[10px] font-bold">
+                      {b.status}
+                    </span>
                   </div>
-                  <div>
-                    <p className="font-semibold text-slate-800">{tx.description}</p>
-                    <p className="text-[11px] text-slate-400">{formatDateTime(tx.created_at)}</p>
-                  </div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {b.service_name || b.title}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Technician: {b.technician_name || 'Assigned Specialist'} &bull; {b.customer_address}
+                  </p>
                 </div>
-                <div className="text-right">
-                  <span className={`font-bold text-sm ${tx.type === 'CREDIT' ? 'text-emerald-600' : 'text-slate-900'}`}>
-                    {tx.type === 'CREDIT' ? '+' : '-'}{formatCurrency(tx.amount)}
-                  </span>
-                  <p className="text-[10px] text-slate-400">Bal: {formatCurrency(tx.balance_after)}</p>
-                </div>
+
+                <Link
+                  to={`/customer/bookings/${b.id}`}
+                  className="px-5 py-2.5 rounded-full bg-fixblue-500 hover:bg-fixblue-600 text-white font-bold text-xs shadow-md shadow-blue-500/25 flex items-center justify-center gap-1.5 shrink-0"
+                >
+                  <span>Track Live Status</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Active & Recent Bookings List */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-fixblue-900">
-            Recent Service Requests
-          </h2>
-          <Link
-            to="/customer/bookings"
-            className="text-xs font-bold text-fixteal-600 hover:text-fixteal-700 flex items-center gap-1"
-          >
-            <span>View All History</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
+      {/* 4. TOP RATED TECHNICIANS */}
+      {technicians.length > 0 && (
+        <div className="space-y-3.5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+              Recommended Specialists
+            </h2>
+            <Link
+              to="/customer/search"
+              className="text-xs font-bold text-fixblue-500 hover:text-fixblue-600"
+            >
+              Browse all &rarr;
+            </Link>
+          </div>
 
-        {loading ? (
-          <Spinner size="lg" label="Loading bookings..." className="py-12" />
-        ) : bookings.length === 0 ? (
-          <EmptyState
-            icon={Calendar}
-            title="You don't have any bookings yet"
-            description="Book an electrician, plumber, AC specialist, or emergency repair in seconds."
-            actionLabel="Schedule Your First Service"
-            actionIcon={Plus}
-            onAction={() => navigate('/customer/book')}
-          />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {bookings.slice(0, 4).map((booking) => (
-              <BookingCard
-                key={booking.id}
-                booking={booking}
-                role="customer"
+          <div className="space-y-3.5">
+            {technicians.map((tech) => (
+              <TechnicianCard
+                key={tech.id}
+                technician={tech}
+                variant="horizontal"
               />
             ))}
           </div>
-        )}
-      </div>
-
-      {/* Quick Help / Warranty Strip */}
-      <div className="bg-gradient-to-r from-fixblue-900 to-slate-900 text-white p-6 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-2xl bg-white/10 text-fixteal-300">
-            <ShieldCheck className="w-6 h-6" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold">Have an issue with a recent repair?</h4>
-            <p className="text-xs text-slate-300">
-              Submit a 1-click warranty claim under your guaranteed service coverage.
-            </p>
-          </div>
         </div>
-
-        <Link to="/customer/claims">
-          <Button variant="outline" size="sm" className="border-white/30 text-white hover:bg-white/10 shrink-0">
-            File Warranty Claim
-          </Button>
-        </Link>
-      </div>
+      )}
     </div>
   );
 }

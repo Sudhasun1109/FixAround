@@ -17,6 +17,8 @@ import {
   Settings,
   ShieldAlert,
   Download,
+  MapPin,
+  Sparkles,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -66,7 +68,7 @@ export default function Navbar() {
         { label: 'Dashboard', path: '/customer/dashboard' },
         { label: 'Find Services', path: '/services' },
         { label: 'My Bookings', path: '/customer/bookings' },
-        { label: 'Wallet & Refunds', path: '/customer/wallet' },
+        { label: 'Wallet & Points', path: '/customer/wallet' },
         { label: 'Emergency', path: '/customer/emergency', emergency: true },
       ];
     }
@@ -94,43 +96,51 @@ export default function Navbar() {
   const links = getNavLinks();
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-2xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-fixblue-800 flex items-center justify-center text-white shadow-md group-hover:bg-fixblue-900 transition-colors">
-              <Wrench className="w-5 h-5 text-fixteal-400 group-hover:rotate-12 transition-transform" />
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-3">
+            <Link to="/" className="flex items-center gap-2.5 group">
+              <div className="w-10 h-10 rounded-2xl bg-fixblue-500 flex items-center justify-center text-white shadow-md shadow-blue-500/25 group-hover:scale-105 transition-transform">
+                <Wrench className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <span className="text-xl font-extrabold tracking-tight text-[#172033]">
+                  Fix<span className="text-fixblue-500">Around</span>
+                </span>
+                <span className="block text-[9px] font-bold tracking-widest text-slate-400 uppercase -mt-1">
+                  Smart Local Service
+                </span>
+              </div>
+            </Link>
+
+            {/* Location Pill Selector */}
+            <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 border border-slate-200/80 text-xs font-bold text-slate-700">
+              <MapPin className="w-3.5 h-3.5 text-fixblue-500" />
+              <span>Tiruppur, India</span>
             </div>
-            <div>
-              <span className="text-xl font-extrabold tracking-tight text-fixblue-900">
-                Fix<span className="text-fixteal-600">Around</span>
-              </span>
-              <span className="block text-[9px] font-bold tracking-widest text-slate-600 uppercase -mt-1">
-                Local Repairs
-              </span>
-            </div>
-          </Link>
+          </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1 lg:gap-2">
+          <nav className="hidden md:flex items-center gap-1.5">
             {links.map((link) => (
               <NavLink
                 key={link.path}
                 to={link.path}
                 className={({ isActive }) => `
-                  px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors
+                  px-4 py-2 rounded-full text-xs font-bold transition-all
                   ${
                     link.emergency
-                      ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 flex items-center gap-1.5 border border-rose-200'
+                      ? 'bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center gap-1.5 border border-rose-200 shadow-xs'
                       : isActive
-                      ? 'text-fixblue-900 bg-slate-100'
-                      : 'text-slate-600 hover:text-fixblue-900 hover:bg-slate-50'
+                      ? 'text-fixblue-600 bg-blue-50/80 shadow-2xs'
+                      : 'text-slate-600 hover:text-fixblue-600 hover:bg-slate-50'
                   }
                 `}
               >
                 {link.emergency && (
-                  <AlertTriangle className="w-3.5 h-3.5 text-rose-600 animate-bounce" />
+                  <AlertTriangle className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
                 )}
                 {link.label}
               </NavLink>
@@ -139,6 +149,16 @@ export default function Navbar() {
 
           {/* User Section & Notifications */}
           <div className="hidden md:flex items-center gap-3">
+            {/* PWA Install Trigger */}
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('fixaround:open-pwa-install'))}
+              className="p-2 rounded-full text-slate-500 hover:text-fixblue-600 hover:bg-slate-50 transition-colors"
+              title="Install FixAround App"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+
             {isAuthenticated ? (
               <>
                 <NotificationBell />
@@ -148,9 +168,9 @@ export default function Navbar() {
                   <button
                     type="button"
                     onClick={() => setDropdownOpen(!dropdownOpen)}
-                    className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full border border-slate-200/90 hover:bg-slate-50 transition-colors shadow-2xs"
                   >
-                    <div className="w-8 h-8 rounded-full bg-fixblue-800 text-white flex items-center justify-center font-bold text-xs uppercase overflow-hidden">
+                    <div className="w-7 h-7 rounded-full bg-fixblue-500 text-white flex items-center justify-center font-bold text-xs uppercase overflow-hidden shadow-xs">
                       {user?.avatar_url ? (
                         <img
                           src={user.avatar_url}
@@ -158,81 +178,79 @@ export default function Navbar() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <span>
-                          {user?.first_name ? user.first_name[0] : 'U'}
-                        </span>
+                        <span>{user?.first_name ? user.first_name[0] : 'U'}</span>
                       )}
                     </div>
-                    <span className="text-xs font-semibold text-slate-700 max-w-[120px] truncate">
-                      {user?.first_name || 'My Account'}
+                    <span className="text-xs font-bold text-slate-700 max-w-[120px] truncate">
+                      {user?.first_name || 'Account'}
                     </span>
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                   </button>
 
                   {/* Dropdown Menu */}
                   {dropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white shadow-xl border border-slate-100 py-1.5 z-50">
+                    <div className="absolute right-0 mt-2 w-56 rounded-3xl bg-white shadow-card border border-slate-100 py-2 z-50">
                       <div className="px-4 py-3 border-b border-slate-100">
-                        <p className="text-xs font-medium text-slate-500">Signed in as</p>
-                        <p className="text-sm font-bold text-slate-800 truncate">
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                          Signed in as
+                        </p>
+                        <p className="text-xs font-bold text-slate-800 truncate">
                           {user?.email}
                         </p>
-                        <span className="inline-block mt-1 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                        <span className="inline-block mt-1 text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-fixblue-600">
                           {user?.role}
                         </span>
                       </div>
 
-                      <div className="py-1">
+                      <div className="py-1 text-xs">
                         <Link
                           to={getDashboardPath()}
                           onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-slate-50 font-semibold"
                         >
                           <LayoutDashboard className="w-4 h-4 text-slate-400" />
-                          Dashboard
+                          <span>Dashboard</span>
                         </Link>
+
+                        {user?.role === ROLES.CUSTOMER && (
+                          <>
+                            <Link
+                              to="/customer/bookings"
+                              onClick={() => setDropdownOpen(false)}
+                              className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-slate-50 font-semibold"
+                            >
+                              <Calendar className="w-4 h-4 text-slate-400" />
+                              <span>My Bookings</span>
+                            </Link>
+                            <Link
+                              to="/customer/wallet"
+                              onClick={() => setDropdownOpen(false)}
+                              className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-slate-50 font-semibold"
+                            >
+                              <Wallet className="w-4 h-4 text-fixblue-500" />
+                              <span>Wallet & Rewards</span>
+                            </Link>
+                          </>
+                        )}
 
                         <Link
                           to={`/${user?.role}/profile`}
                           onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-slate-50 font-semibold"
                         >
-                          <User className="w-4 h-4 text-slate-400" />
-                          Profile & Settings
+                          <Settings className="w-4 h-4 text-slate-400" />
+                          <span>Profile Settings</span>
                         </Link>
-
-                        {user?.role === ROLES.CUSTOMER && (
-                          <Link
-                            to="/customer/wallet"
-                            onClick={() => setDropdownOpen(false)}
-                            className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
-                          >
-                            <Wallet className="w-4 h-4 text-emerald-600" />
-                            Wallet & Refunds
-                          </Link>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDropdownOpen(false);
-                            window.dispatchEvent(new CustomEvent('fixaround:open-pwa-install'));
-                          }}
-                          className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-fixteal-700 hover:bg-fixteal-50 text-left"
-                        >
-                          <Download className="w-4 h-4 text-fixteal-600" />
-                          Install FixAround App
-                        </button>
                       </div>
 
-                      <div className="border-t border-slate-100 py-1">
+                      <div className="pt-1 border-t border-slate-100">
                         <button
                           type="button"
                           onClick={handleLogout}
-                          className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                          className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50"
                         >
                           <LogOut className="w-4 h-4" />
-                          Sign out
+                          <span>Sign Out</span>
                         </button>
                       </div>
                     </div>
@@ -243,33 +261,31 @@ export default function Navbar() {
               <div className="flex items-center gap-2">
                 <Link
                   to="/login"
-                  className="px-4 py-2 text-sm font-semibold text-fixblue-900 hover:text-fixblue-950 transition-colors"
+                  className="px-4 py-2 rounded-full border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
                 >
-                  Log In
+                  Sign In
                 </Link>
                 <Link
                   to="/register"
-                  className="px-4 py-2 text-sm font-semibold text-white bg-fixblue-800 hover:bg-fixblue-900 rounded-lg shadow-sm transition-colors"
+                  className="px-5 py-2 rounded-full bg-fixblue-500 hover:bg-fixblue-600 text-white text-xs font-bold shadow-md shadow-blue-500/25 active:scale-95 transition-all"
                 >
-                  Sign Up
+                  Get Started
                 </Link>
               </div>
             )}
           </div>
 
-          {/* Mobile hamburger button */}
-          <div className="flex md:hidden items-center gap-2">
+          {/* Mobile Right Controls: Bell & Menu Toggle */}
+          <div className="flex items-center gap-2 md:hidden">
             {isAuthenticated && <NotificationBell />}
+
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 focus:outline-none"
+              className="p-2 rounded-full text-slate-700 hover:bg-slate-100"
+              aria-label="Toggle Menu"
             >
-              {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
@@ -277,13 +293,13 @@ export default function Navbar() {
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-2">
+        <div className="md:hidden border-t border-slate-100 bg-white px-5 pt-3 pb-6 space-y-2 shadow-xl">
           {links.map((link) => (
             <Link
               key={link.path}
               to={link.path}
               onClick={() => setMobileMenuOpen(false)}
-              className={`block px-3 py-2.5 rounded-lg text-sm font-semibold ${
+              className={`block px-4 py-2.5 rounded-full text-xs font-bold ${
                 link.emergency
                   ? 'bg-rose-50 text-rose-700 border border-rose-200'
                   : 'text-slate-700 hover:bg-slate-50'
@@ -293,50 +309,29 @@ export default function Navbar() {
             </Link>
           ))}
 
-          <div className="pt-4 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                window.dispatchEvent(new CustomEvent('fixaround:open-pwa-install'));
-              }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 mb-2 rounded-xl text-xs font-bold text-fixteal-800 bg-fixteal-50 hover:bg-fixteal-100 border border-fixteal-200 transition-colors"
-            >
-              <Download className="w-4 h-4 text-fixteal-600" />
-              <span>Install FixAround App</span>
-            </button>
-
+          <div className="pt-3 border-t border-slate-100">
             {isAuthenticated ? (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Link
                   to={getDashboardPath()}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg"
+                  className="block px-4 py-2 text-xs font-bold text-slate-700"
                 >
                   Dashboard
                 </Link>
-                {user?.role === ROLES.CUSTOMER && (
-                  <Link
-                    to="/customer/wallet"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 rounded-lg"
-                  >
-                    Wallet & Refunds
-                  </Link>
-                )}
                 <Link
                   to={`/${user?.role}/profile`}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg"
+                  className="block px-4 py-2 text-xs font-bold text-slate-700"
                 >
                   Profile Settings
                 </Link>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full text-left px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 rounded-lg"
+                  className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600"
                 >
-                  Sign out
+                  Sign Out
                 </button>
               </div>
             ) : (
@@ -344,14 +339,14 @@ export default function Navbar() {
                 <Link
                   to="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-center py-2.5 px-4 rounded-lg border border-slate-300 text-sm font-semibold text-slate-700"
+                  className="text-center py-2.5 px-4 rounded-full border border-slate-200 text-xs font-bold text-slate-700"
                 >
-                  Log In
+                  Sign In
                 </Link>
                 <Link
                   to="/register"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-center py-2.5 px-4 rounded-lg bg-fixblue-800 text-sm font-semibold text-white shadow-xs"
+                  className="text-center py-2.5 px-4 rounded-full bg-fixblue-500 text-xs font-bold text-white shadow-xs"
                 >
                   Sign Up
                 </Link>

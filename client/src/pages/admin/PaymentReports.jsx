@@ -20,6 +20,7 @@ import {
   Send,
   User,
   Wrench,
+  Download,
 } from 'lucide-react';
 
 export default function PaymentReports() {
@@ -132,6 +133,60 @@ export default function PaymentReports() {
     }
   };
 
+  // Export to CSV helper
+  const handleExportCSV = () => {
+    if (activeTab === 'settlements') {
+      if (!settlements.length) {
+        showToast.error('No settlements to export');
+        return;
+      }
+      const headers = ['Settlement ID', 'Booking #', 'Technician', 'Gross Amount', 'Platform Fee', 'Net Payout', 'Status', 'Date'];
+      const rows = settlements.map(s => [
+        s.id,
+        `"${s.booking_number || 'BK-' + s.booking_id}"`,
+        `"${s.technician_name || 'Technician'}"`,
+        s.gross_amount,
+        s.platform_fee,
+        s.net_amount,
+        s.status,
+        `"${s.created_at || ''}"`
+      ]);
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `technician_settlements_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast.success('Settlements report exported to CSV');
+    } else {
+      if (!payments.length) {
+        showToast.error('No payments to export');
+        return;
+      }
+      const headers = ['Payment #', 'Booking #', 'Customer', 'Method', 'Amount', 'Status', 'Date'];
+      const rows = payments.map(p => [
+        `"${p.payment_number || 'PAY-' + p.id}"`,
+        `"${p.booking_number || p.booking_id || ''}"`,
+        `"${p.customer_name || 'Customer'}"`,
+        p.payment_method || 'DIGITAL',
+        p.amount,
+        p.status,
+        `"${p.created_at || ''}"`
+      ]);
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `customer_payments_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast.success('Payment ledger exported to CSV');
+    }
+  };
+
   const totalCollected = payments
     .filter((p) => p.status === 'SUCCESS' || p.status === 'PAID')
     .reduce((sum, p) => sum + Number(p.amount || 0), 0);
@@ -156,17 +211,27 @@ export default function PaymentReports() {
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          icon={RefreshCw}
-          onClick={() => {
-            fetchSettlements();
-            fetchPayments();
-          }}
-        >
-          Refresh Data
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Download}
+            onClick={handleExportCSV}
+          >
+            Export CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={RefreshCw}
+            onClick={() => {
+              fetchSettlements();
+              fetchPayments();
+            }}
+          >
+            Refresh Data
+          </Button>
+        </div>
       </div>
 
       {/* Metrics Strip */}

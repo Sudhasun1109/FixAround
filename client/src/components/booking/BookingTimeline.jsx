@@ -1,7 +1,7 @@
 import React from 'react';
-import { BOOKING_STATUSES, TIMELINE_STEPS } from '../../utils/constants';
-import { formatDateTime, getStatusLabel } from '../../utils/formatters';
-import { Check, Clock, AlertCircle, XCircle } from 'lucide-react';
+import { BOOKING_STATUSES } from '../../utils/constants';
+import { getStatusLabel } from '../../utils/formatters';
+import { Check, Clock, XCircle, Navigation, Wrench, CheckCircle2, FileText } from 'lucide-react';
 
 export default function BookingTimeline({ currentStatus, history = [] }) {
   const isCancelled = currentStatus === BOOKING_STATUSES.CANCELLED;
@@ -9,139 +9,142 @@ export default function BookingTimeline({ currentStatus, history = [] }) {
   const isDisputed = currentStatus === BOOKING_STATUSES.DISPUTED;
   const isNoTech = currentStatus === BOOKING_STATUSES.NO_TECHNICIAN_AVAILABLE;
 
-  const currentStepIndex = TIMELINE_STEPS.indexOf(currentStatus);
+  // The 4 main customer-facing milestone steps (Screen 3 Inspiration)
+  const steps = [
+    {
+      id: 'REQUESTED',
+      label: 'Booking',
+      sublabel: 'Requested',
+      icon: Check,
+      matchingStatuses: ['REQUESTED', 'ASSIGNED', 'ACCEPTED'],
+    },
+    {
+      id: 'ON_THE_WAY',
+      label: 'One the way',
+      sublabel: 'En Route',
+      icon: Navigation,
+      matchingStatuses: ['ON_THE_WAY', 'ARRIVED'],
+    },
+    {
+      id: 'IN_PROGRESS',
+      label: 'Working',
+      sublabel: 'In Progress',
+      icon: Wrench,
+      matchingStatuses: ['IN_PROGRESS'],
+    },
+    {
+      id: 'COMPLETED',
+      label: 'Completed',
+      sublabel: 'Finished',
+      icon: CheckCircle2,
+      matchingStatuses: ['COMPLETED'],
+    },
+  ];
 
-  // Map history events to timestamp lookup
-  const timestampMap = {};
-  if (Array.isArray(history)) {
-    history.forEach((h) => {
-      const statusKey = h.to_status || h.status;
-      if (statusKey && !timestampMap[statusKey]) {
-        timestampMap[statusKey] = h.created_at || h.timestamp;
-      }
-    });
-  }
+  // Determine which milestone step is active
+  const getStepStatus = (index) => {
+    if (currentStatus === 'COMPLETED') return 'completed';
+
+    if (['AWAITING_CUSTOMER_VERIFICATION', 'VERIFIED', 'PAYMENT_PENDING'].includes(currentStatus)) {
+      if (index <= 2) return 'completed';
+      if (index === 3) return 'active';
+      return 'pending';
+    }
+
+    if (currentStatus === 'IN_PROGRESS' || currentStatus === 'AWAITING_APPROVAL') {
+      if (index <= 1) return 'completed';
+      if (index === 2) return 'active';
+      return 'pending';
+    }
+
+    if (currentStatus === 'ON_THE_WAY' || currentStatus === 'ARRIVED') {
+      if (index === 0) return 'completed';
+      if (index === 1) return 'active';
+      return 'pending';
+    }
+
+    if (['REQUESTED', 'ASSIGNED', 'ACCEPTED'].includes(currentStatus)) {
+      if (index === 0) return 'active';
+      return 'pending';
+    }
+
+    return 'pending';
+  };
 
   return (
-    <div className="py-4">
+    <div className="py-2">
       {/* Abnormal termination banner if applicable */}
       {(isCancelled || isRejected || isDisputed || isNoTech) && (
-        <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-3">
+        <div className="mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 flex items-center gap-3">
           <XCircle className="w-5 h-5 text-rose-600 shrink-0" />
           <div>
-            <h4 className="text-sm font-bold text-rose-800">
+            <h4 className="text-xs font-bold text-rose-800">
               Booking is {getStatusLabel(currentStatus)}
             </h4>
-            <p className="text-xs text-rose-600">
-              This request was halted in state: {currentStatus}. Contact support if you need further help.
+            <p className="text-[11px] text-rose-600">
+              This request was halted in state: {currentStatus}.
             </p>
           </div>
         </div>
       )}
 
-      {/* Responsive timeline: vertical on mobile, horizontal on md+ */}
-      <div className="hidden md:flex items-start justify-between relative">
-        {/* Background connecting line */}
-        <div className="absolute top-4 left-6 right-6 h-0.5 bg-slate-200 -z-0" />
+      {/* Modern Horizontal Stepper (Screen 3 Inspiration) */}
+      <div className="relative flex items-center justify-between px-2 sm:px-6">
+        {/* Background Connecting Line */}
+        <div className="absolute top-5 left-8 right-8 h-1 bg-slate-100 rounded-full z-0" />
 
-        {TIMELINE_STEPS.map((step, index) => {
-          const isDone = currentStepIndex > index || currentStatus === BOOKING_STATUSES.COMPLETED;
-          const isCurrent = currentStepIndex === index;
-          const isPending = currentStepIndex < index && !isDone;
-          const timestamp = timestampMap[step];
+        {/* Active Colored Progress Line */}
+        <div
+          className="absolute top-5 left-8 h-1 bg-fixblue-500 rounded-full z-0 transition-all duration-500"
+          style={{
+            width:
+              currentStatus === 'COMPLETED'
+                ? 'calc(100% - 4rem)'
+                : ['AWAITING_CUSTOMER_VERIFICATION', 'VERIFIED', 'PAYMENT_PENDING'].includes(currentStatus)
+                ? '85%'
+                : currentStatus === 'IN_PROGRESS' || currentStatus === 'AWAITING_APPROVAL'
+                ? '66%'
+                : currentStatus === 'ON_THE_WAY' || currentStatus === 'ARRIVED'
+                ? '33%'
+                : '10%',
+          }}
+        />
+
+        {steps.map((step, index) => {
+          const status = getStepStatus(index);
+          const Icon = step.icon;
 
           return (
-            <div
-              key={step}
-              className="flex flex-col items-center text-center relative z-10 max-w-[110px]"
-            >
+            <div key={step.id} className="relative z-10 flex flex-col items-center">
+              {/* Stepper Circle */}
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                  isDone
-                    ? 'bg-fixteal-600 text-white shadow-xs'
-                    : isCurrent
-                    ? 'bg-fixblue-800 text-white ring-4 ring-fixblue-100'
-                    : 'bg-white border-2 border-slate-300 text-slate-400'
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  status === 'completed'
+                    ? 'bg-fixblue-500 text-white shadow-md shadow-blue-500/25'
+                    : status === 'active'
+                    ? 'bg-fixblue-500 text-white ring-4 ring-blue-100 shadow-md shadow-blue-500/35 scale-105'
+                    : 'bg-white border-2 border-slate-200 text-slate-300'
                 }`}
               >
-                {isDone ? (
+                {status === 'completed' ? (
                   <Check className="w-4 h-4 stroke-[3]" />
-                ) : isCurrent ? (
-                  <Clock className="w-4 h-4 animate-spin text-white" />
                 ) : (
-                  <span className="text-xs font-bold">{index + 1}</span>
+                  <Icon className="w-4 h-4" />
                 )}
               </div>
 
+              {/* Step Label */}
               <span
-                className={`mt-2 text-xs font-bold leading-tight ${
-                  isCurrent
-                    ? 'text-fixblue-900'
-                    : isDone
+                className={`mt-2 text-[11px] sm:text-xs font-bold tracking-tight text-center ${
+                  status === 'active'
+                    ? 'text-fixblue-600 font-extrabold'
+                    : status === 'completed'
                     ? 'text-slate-800'
                     : 'text-slate-400'
                 }`}
               >
-                {getStatusLabel(step)}
+                {step.label}
               </span>
-
-              {timestamp ? (
-                <span className="mt-1 text-[10px] text-slate-400">
-                  {formatDateTime(timestamp)}
-                </span>
-              ) : isCurrent ? (
-                <span className="mt-1 text-[10px] font-semibold text-fixteal-600">
-                  In progress
-                </span>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Vertical timeline for mobile */}
-      <div className="md:hidden space-y-6 relative pl-6 before:content-[''] before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-        {TIMELINE_STEPS.map((step, index) => {
-          const isDone = currentStepIndex > index || currentStatus === BOOKING_STATUSES.COMPLETED;
-          const isCurrent = currentStepIndex === index;
-          const timestamp = timestampMap[step];
-
-          return (
-            <div key={step} className="relative flex items-start gap-4">
-              <div
-                className={`absolute -left-6 top-0 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
-                  isDone
-                    ? 'bg-fixteal-600 text-white'
-                    : isCurrent
-                    ? 'bg-fixblue-800 text-white ring-3 ring-fixblue-100'
-                    : 'bg-white border-2 border-slate-300 text-slate-400'
-                }`}
-              >
-                {isDone ? (
-                  <Check className="w-3.5 h-3.5 stroke-[3]" />
-                ) : (
-                  <span className="text-[10px] font-bold">{index + 1}</span>
-                )}
-              </div>
-
-              <div>
-                <h5
-                  className={`text-xs font-bold ${
-                    isCurrent
-                      ? 'text-fixblue-900'
-                      : isDone
-                      ? 'text-slate-800'
-                      : 'text-slate-400'
-                  }`}
-                >
-                  {getStatusLabel(step)}
-                </h5>
-                {timestamp && (
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    {formatDateTime(timestamp)}
-                  </p>
-                )}
-              </div>
             </div>
           );
         })}

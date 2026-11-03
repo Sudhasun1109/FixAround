@@ -3,25 +3,41 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --primary-blue: #3498F6;
+    --dark-blue: #1976D2;
+    --bg-app: #F4F7FB;
+    --text-primary: #172033;
+    --text-secondary: #7B8494;
+  }
+
   html {
     scroll-behavior: smooth;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #F4F7FB;
+    color: #172033;
+  }
+
+  body {
+    background-color: #F4F7FB;
+    color: #172033;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #F4F7FB;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 4px;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -47,6 +63,15 @@
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+}
+
+/* Hide scrollbar for category pill rows */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Print Styles for Invoices */

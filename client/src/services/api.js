@@ -104,6 +104,10 @@ export const bookingsApi = {
   getIncomingRequests: () => api.get('/bookings/incoming'),
   getMyBookings: (params) => api.get('/bookings/my-bookings', { params }),
   assignTechnician: (id, technicianId) => api.post(`/bookings/${id}/assign`, { technician_id: technicianId }),
+  generatePin: (id) => api.post(`/bookings/${id}/generate-pin`),
+  getVerificationPin: (id) => api.get(`/bookings/${id}/verification-pin`),
+  verifyPin: (id, pin) => api.post(`/bookings/${id}/verify-pin`, { pin }),
+  processPayment: (id, data) => api.post(`/bookings/${id}/payment`, data),
 };
 
 // Estimates API

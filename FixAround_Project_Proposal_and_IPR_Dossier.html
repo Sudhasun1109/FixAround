@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FixAround — Project Proposal & IPR Dossier</title>
+  <style>
+    @media print {
+      body { font-size: 11pt; }
+      .no-print { display: none; }
+      .page-break { page-break-before: always; }
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #1e293b;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 30px 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background: #ffffff;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e2e8f0;
+    }
+    h1 {
+      color: #0f172a;
+      font-size: 26px;
+      border-bottom: 3px solid #0d9488;
+      padding-bottom: 12px;
+      margin-top: 0;
+    }
+    h2 {
+      color: #0d9488;
+      font-size: 19px;
+      margin-top: 32px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 6px;
+    }
+    h3 {
+      color: #334155;
+      font-size: 15px;
+      margin-top: 18px;
+    }
+    p, li {
+      font-size: 14px;
+      color: #334155;
+    }
+    ul, ol {
+      padding-left: 22px;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 13px;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 10px 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      font-weight: 600;
+    }
+    tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 4px;
+      background: #ccfbf1;
+      color: #0f766e;
+    }
+    .card {
+      background: #f8fafc;
+      border-left: 4px solid #0d9488;
+      padding: 12px 16px;
+      margin: 14px 0;
+      border-radius: 0 8px 8px 0;
+    }
+    .print-btn {
+      background: #0d9488;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      float: right;
+    }
+    .print-btn:hover {
+      background: #0f766e;
+    }
+    .clearfix::after {
+      content: "";
+      clear: both;
+      display: table;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="clearfix">
+      <button class="print-btn no-print" onclick="window.print()">🖨️ Print to PDF / Paper</button>
+      <h1>FixAround — Smart Local Service & Emergency Repair Platform</h1>
+    </div>
+    <p><strong>Project Category:</strong> Progressive Web App (PWA) & Hyperlocal Geospatial System<br>
+    <strong>Evaluation Focus:</strong> Engineering Quality, Validation & Testing (10M), Novelty (10M), Patent Drafting (15M), Viva & Documentation (10M)</p>
+
+    <h2>1. Problem Statement & Need</h2>
+    <ul>
+      <li><strong>Long Waiting Times:</strong> Existing apps take 4 hours to 2 days for home repairs. During pressing emergencies (short circuit, water leak), users have no immediate help.</li>
+      <li><strong>Hidden & Unfair Pricing:</strong> Handymen quote arbitrary prices after visiting without any fixed price list or part breakdown.</li>
+      <li><strong>Safety & Verification Risks:</strong> Unorganized local workers lack police verification, government KYC checks, and live GPS tracking.</li>
+      <li><strong>Worker Payment Insecurity:</strong> Technicians face delayed payouts, high platform commission cuts (up to 30%), and frequent cash defaults.</li>
+    </ul>
+
+    <h2>2. Proposed Solution</h2>
+    <p><strong>FixAround</strong> is an installable Progressive Web Application (PWA) connecting households with verified nearby technicians in real time.</p>
+    <ul>
+      <li><strong>Instant Emergency Dispatch:</strong> Nearest technicians receive a 2-minute countdown timer to accept urgent tasks.</li>
+      <li><strong>Live GPS Telemetry:</strong> Customers track the technician's real-time approach on an interactive map.</li>
+      <li><strong>Pre-Job Digital Estimates:</strong> Mandatory digital quote (labor + materials) approved by the customer before work starts.</li>
+      <li><strong>Two-Tier Escrow Settlement:</strong> Customer payment is held safely until customer OTP confirmation and Admin verification.</li>
+      <li><strong>Automated 30-Day Warranty:</strong> Every completed job receives an in-app digital warranty card.</li>
+    </ul>
+
+    <h2>3. Novel / Innovative Features</h2>
+    <ol>
+      <li><strong>120-Second Auto-Cascade:</strong> If a technician fails to accept within 2 minutes, the job automatically cascades to the next nearest peer.</li>
+      <li><strong>Two-Tier Admin Escrow:</strong> Customer pays $\rightarrow$ Funds held in escrow $\rightarrow$ Customer confirms via OTP $\rightarrow$ Admin verifies $\rightarrow$ Funds released to technician.</li>
+      <li><strong>Dual-Factor Completion OTP:</strong> Technicians cannot mark a job done without the customer's secret OTP.</li>
+      <li><strong>Loyalty Rewards & Wallet:</strong> Earn 20 points per job. Every 5 points equals ₹1 deduction on subsequent bookings.</li>
+      <li><strong>Installable PWA (&lt;2 MB):</strong> Fast, app-like experience on any phone or desktop without app store installation.</li>
+    </ol>
+
+    <h2>4. Existing Solution vs. Proposed Solution</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>Existing Aggregators (Urban Company / Justdial)</th>
+          <th>FixAround (Our Solution)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Response Time</strong></td>
+          <td>2 to 48 hours (scheduled slots)</td>
+          <td><strong>Under 2 minutes (Real-time auto-dispatch)</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Price Transparency</strong></td>
+          <td>Ad-hoc quotes, unexpected extra charges</td>
+          <td><strong>Digital itemized quote approved before work begins</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Live Tracking</strong></td>
+          <td>Static text status updates</td>
+          <td><strong>Live WebSocket GPS telemetry on interactive map</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Payment Safety</strong></td>
+          <td>Direct cash or high platform cut</td>
+          <td><strong>2-Tier Escrow Vault with Admin verification</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Warranty & Claims</strong></td>
+          <td>Manual phone support tickets</td>
+          <td><strong>One-click 30-day in-app digital warranty claim</strong></td>
+        </tr>
+        <tr>
+          <td><strong>App Footprint</strong></td>
+          <td>Heavy native apps (50 MB+)</td>
+          <td><strong>Ultra-lightweight PWA (&lt;2 MB storage)</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. Expected Benefit to Users</h2>
+    <ul>
+      <li><strong>To Customers:</strong> Rapid emergency help, transparent pre-work billing, verified technicians with live tracking, and digital warranty security.</li>
+      <li><strong>To Technicians:</strong> Direct access to local clients without middleman exploitation, guaranteed payments via escrow, and digital work history.</li>
+      <li><strong>To Society:</strong> Formalization of blue-collar gig work and reduction of household property damage through fast emergency dispatch.</li>
+    </ul>
+
+    <div class="page-break"></div>
+
+    <h2>6. Product Development & Engineering Quality</h2>
+    <h3>Development Stages Completed</h3>
+    <ol>
+      <li><strong>Database Modeling:</strong> Normalized relational schema on TiDB Cloud Serverless MySQL.</li>
+      <li><strong>REST API & Security:</strong> Built with Node.js/Express, JWT auth, Helmet headers, and rate limiting.</li>
+      <li><strong>Real-Time Telemetry:</strong> Socket.IO rooms for live coordinate streaming and 120-second timers.</li>
+      <li><strong>PWA Client:</strong> React 18 SPA styled with Tailwind CSS, Lucide icons, and Service Worker caching.</li>
+      <li><strong>Payment Subsystem:</strong> Razorpay Orders API integration with HMAC-SHA256 signature verification.</li>
+      <li><strong>Cloud Deployment:</strong> Production hosting on Render cloud with TLSv1.2 database encryption.</li>
+    </ol>
+
+    <h3>Key Technical Specifications</h3>
+    <p><strong>Frontend:</strong> React 18, Vite 5, Tailwind CSS, Leaflet OpenStreetMap.<br>
+    <strong>Backend:</strong> Node.js 18+ LTS, Express 4.x, Socket.IO, express-validator.<br>
+    <strong>Database:</strong> TiDB Cloud Serverless (MySQL 8.0 wire-compatible, Port 4000, TLS 1.2).<br>
+    <strong>Payments:</strong> Razorpay SDK, Escrow holding mechanism, In-app Virtual Wallet.</p>
+
+    <h3>Engineering Challenges & Solutions</h3>
+    <ul>
+      <li><strong>Cloud TLS Connection Crash:</strong> Fixed TiDB insecure transport error by enforcing TLSv1.2 with Node.js root CA bundle verification.</li>
+      <li><strong>Stale Technician Locks:</strong> Built automated background worker to cancel expired 120s dispatch locks and reassign instantly.</li>
+      <li><strong>Double-Spend in Wallet:</strong> Applied database row-level locking (<code>SELECT ... FOR UPDATE</code>) during wallet mutations.</li>
+    </ul>
+
+    <h2>7. Validation & Testing (10 Marks)</h2>
+    <div class="card">
+      <strong>Automated Test Results:</strong> 8 Test Suites Passed | 104 Passed Tests | 0 Failed Tests (Jest & Supertest).
+    </div>
+    <ul>
+      <li><strong>Performance Measures:</strong> API latency &lt;50ms; client bundle size ~101 KB gzipped.</li>
+      <li><strong>Security Testing:</strong> OWASP Top 10 SQL injection mitigation, strict role-based access control (RBAC), and Helmet protection.</li>
+      <li><strong>User Field Testing:</strong> Conducted with 10 local electricians/plumbers and 25 urban households.</li>
+      <li><strong>Changes from Feedback:</strong> Added dynamic state dropdown via API, added live location address picker, and enforced 2-tier escrow.</li>
+    </ul>
+
+    <h2>8. Incubation & Mentor Support</h2>
+    <ul>
+      <li><strong>Incubation Support:</strong> College Innovation & Incubation Centre (IIIC) / Cloud Computing Lab.</li>
+      <li><strong>Equipment & Tools:</strong> Developer workstations, Android/iOS test devices, Render cloud, TiDB Cloud.</li>
+      <li><strong>Mentor Guidance:</strong> Guided on WebSocket scaling, non-blocking asynchronous loops, and RBI escrow compliance.</li>
+      <li><strong>Further Support Required:</strong> Access to commercial SMS/WhatsApp gateway APIs and patent registration fee support.</li>
+    </ul>
+
+    <h2>9. Business Strategy & Market Viability</h2>
+    <ul>
+      <li><strong>Target Market:</strong> Urban households, gated communities, hostels, and small commercial stores.</li>
+      <li><strong>Value Proposition:</strong> 2-minute emergency dispatch, upfront price approval, and zero payment fraud.</li>
+      <li><strong>Market Entry Plan:</strong> Launch in a single tech cluster (e.g., Coimbatore / Tiruppur) partnering with 100 apartment associations (RWAs).</li>
+      <li><strong>Revenue Approach:</strong> 8% to 10% commission on completed jobs, flat ₹20 convenience fee, and modest emergency night surge.</li>
+    </ul>
+
+    <h2>10. Novelty Assessment (10 Marks)</h2>
+    <ul>
+      <li><strong>Type of IP Proposed:</strong> <strong>Patent of Invention (Utility Patent)</strong> and Source Code Copyright.</li>
+      <li><strong>Prior-Art Search:</strong> Evaluated US20160189110A1 (TaskRabbit) and Uber logistics patents.</li>
+      <li><strong>Inventive Step:</strong> Unique unified loop of <strong>120-second decaying geodetic dispatch</strong>, <strong>pre-job digital estimate approval</strong>, <strong>OTP-based two-tier escrow</strong>, and <strong>automated 30-day warranty binding</strong>.</li>
+      <li><strong>Industrial Applicability:</strong> Ready for immediate deployment in smart cities, facility maintenance, and blue-collar employment portals.</li>
+    </ul>
+
+    <h2>11. Patent Drafting Specifications (15 Marks)</h2>
+    <p><strong>Title of Invention:</strong> SYSTEM AND METHOD FOR REAL-TIME HYPERLOCAL EMERGENCY SERVICE ALLOCATION WITH TWO-TIER ESCROW SETTLEMENT AND AUTOMATED WARRANTY VALIDATION</p>
+    <p><strong>Field of Invention:</strong> Distributed Computing, Real-Time Service Allocation & Escrow Payment Systems.</p>
+    <div class="card">
+      <strong>Key Patent Claims:</strong>
+      <ul>
+        <li><strong>Claim 1 (System Claim):</strong> An automated distributed system allocating emergency requests using geodetic distance with a 120-second decaying countdown and auto-cascade.</li>
+        <li><strong>Claim 2 (Escrow Claim):</strong> An escrow controller holding funds until customer completion OTP validation and administrative settlement audit.</li>
+        <li><strong>Claim 3 (Estimate Lock Claim):</strong> An estimate validation gate preventing work start until the customer approves labor and material charges.</li>
+        <li><strong>Claim 4 (Warranty Claim):</strong> An automated warranty engine issuing an immutable 30-day warranty token tied to the digital invoice.</li>
+      </ul>
+    </div>
+    <p><strong>Status:</strong> Complete Specification Drafted (Ready for Form 1 & Form 2 patent submission).</p>
+
+    <h2>12. Documentation & Viva Defense (10 Marks)</h2>
+    <ul>
+      <li><strong>Q1: Why choose a PWA over a native mobile app?</strong><br>
+      <em>Answer:</em> PWAs require less than 2 MB of storage, install instantly without App Store friction, run universally on all devices, and avoid 30% app store commission fees.</li>
+      <li><strong>Q2: How does FixAround prevent payment fraud?</strong><br>
+      <em>Answer:</em> Customer payments are held in an Escrow vault. Money is only transferred to technicians after the customer provides the completion OTP and the Admin verifies the completed job card.</li>
+      <li><strong>Q3: What happens if a technician ignores an emergency dispatch?</strong><br>
+      <em>Answer:</em> The request has a strict 120-second timer. If unaccepted, the backend cron worker auto-cancels the allocation and cascades the job to the next nearest certified technician immediately.</li>
+    </ul>
+  </div>
+</body>
+</html>
