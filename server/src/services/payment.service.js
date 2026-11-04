@@ -417,6 +417,19 @@ async function processPaymentSuccess(paymentId) {
            WHERE user_id = ?`,
           [booking.technician_id]
         );
+
+        // Update technician wallet & 15% commission liability ledger
+        try {
+          const technicianWalletService = require('./technicianWallet.service');
+          await technicianWalletService.recordOnlinePayment({
+            bookingId: booking.id,
+            technicianId: booking.technician_id,
+            grossAmount,
+            bookingNumber: booking.booking_number
+          }, conn);
+        } catch (wErr) {
+          console.error('[TechnicianWallet] Error updating wallet from payment.service:', wErr.message);
+        }
       }
     }
 

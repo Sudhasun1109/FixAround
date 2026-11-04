@@ -348,9 +348,13 @@ async function generatePin(bookingId, currentUser) {
     throw AppError.notFound('Booking not found');
   }
 
-  // Authorization: must be assigned technician or admin
-  if (currentUser.role === ROLES.TECHNICIAN && booking.technician_id !== currentUser.id) {
-    throw AppError.forbidden('You are not the assigned technician for this booking');
+  // Authorization: must be assigned technician, booking customer, or admin
+  const isAssignedTech = currentUser.role === ROLES.TECHNICIAN && booking.technician_id === currentUser.id;
+  const isOwnerCustomer = currentUser.role === ROLES.CUSTOMER && booking.customer_id === currentUser.id;
+  const isAdmin = currentUser.role === ROLES.ADMIN;
+
+  if (!isAssignedTech && !isOwnerCustomer && !isAdmin) {
+    throw AppError.forbidden('You do not have permission to verify this booking');
   }
 
   // Verify status is IN_PROGRESS or ARRIVED or already AWAITING_CUSTOMER_VERIFICATION
@@ -641,6 +645,28 @@ async function processPayment(bookingId, currentUser, paymentData = {}) {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
         [booking.technician_id, bookingId, paymentId, amount, commissionRate, commissionAmount, technicianPayout]
       );
+
+      // 6. Update technician wallet & 15% commission liability ledger
+      try {
+        const technicianWalletService = require('./technicianWallet.service');
+        if (paymentMethod === 'CASH') {
+          await technicianWalletService.recordCashPayment({
+            bookingId,
+            technicianId: booking.technician_id,
+            grossAmount: amount,
+            bookingNumber: booking.booking_number
+          }, conn);
+        } else {
+          await technicianWalletService.recordOnlinePayment({
+            bookingId,
+            technicianId: booking.technician_id,
+            grossAmount: amount,
+            bookingNumber: booking.booking_number
+          }, conn);
+        }
+      } catch (wErr) {
+        console.error('[TechnicianWallet] Error updating wallet:', wErr.message);
+      }
     }
 
     await conn.commit();

@@ -80,6 +80,27 @@ async function assignNextTechnician(bookingId) {
     });
   }
 
+  // If customer explicitly requested a technician, prioritize them
+  if (booking.technician_id && !excludedIds.includes(Number(booking.technician_id))) {
+    const requestedTechId = Number(booking.technician_id);
+    const preferredIndex = eligibleTechs.findIndex(t => Number(t.technician_user_id) === requestedTechId);
+    if (preferredIndex > -1) {
+      const [preferred] = eligibleTechs.splice(preferredIndex, 1);
+      eligibleTechs.unshift(preferred);
+    } else {
+      const fallbackTechs = await technicianRepo.findEligibleForBooking({
+        categoryId: booking.category_id,
+        latitude: null,
+        longitude: null,
+        excludeTechnicianUserIds: excludedIds
+      });
+      const preferredFallback = fallbackTechs.find(t => Number(t.technician_user_id) === requestedTechId);
+      if (preferredFallback) {
+        eligibleTechs.unshift(preferredFallback);
+      }
+    }
+  }
+
   if (!eligibleTechs || eligibleTechs.length === 0) {
     // No technician eligible
     await bookingRepo.updateStatus(bookingId, BOOKING_STATUSES.NO_TECHNICIAN_AVAILABLE);

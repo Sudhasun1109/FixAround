@@ -214,6 +214,60 @@ async function processPayment(req, res, next) {
   }
 }
 
+async function requestBackup(req, res, next) {
+  try {
+    const backupTechnicianService = require('../services/backupTechnician.service');
+    const bookingId = await resolveBookingId(req.params.id);
+    const result = await backupTechnicianService.requestBackup(bookingId, req.user.id, req.body);
+    return apiResponse.success(res, result, 'Backup technician requested successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getBackupStatus(req, res, next) {
+  try {
+    const backupTechnicianService = require('../services/backupTechnician.service');
+    const bookingId = await resolveBookingId(req.params.id);
+    const result = await backupTechnicianService.getBackupStatusForBooking(bookingId);
+    return apiResponse.success(res, result, 'Backup status retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function acceptBackup(req, res, next) {
+  try {
+    const backupTechnicianService = require('../services/backupTechnician.service');
+    const requestId = parseInt(req.params.requestId, 10);
+    const result = await backupTechnicianService.acceptBackupRequest(requestId, req.user.id);
+    return apiResponse.success(res, result, 'Backup request accepted successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getCallSession(req, res, next) {
+  try {
+    const bookingId = await resolveBookingId(req.params.id);
+    const { pool } = require('../config/database');
+    const [rows] = await pool.query(
+      `SELECT cs.*, 
+              caller.first_name as caller_first_name, caller.last_name as caller_last_name,
+              recv.first_name as receiver_first_name, recv.last_name as receiver_last_name
+       FROM call_sessions cs
+       JOIN users caller ON caller.id = cs.caller_id
+       JOIN users recv ON recv.id = cs.receiver_id
+       WHERE cs.booking_id = ? 
+       ORDER BY cs.id DESC LIMIT 5`,
+      [bookingId]
+    );
+    return apiResponse.success(res, rows, 'Call sessions retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   create,
   getMyBookings,
@@ -229,5 +283,9 @@ module.exports = {
   generatePin,
   getVerificationPin,
   verifyPin,
-  processPayment
+  processPayment,
+  requestBackup,
+  getBackupStatus,
+  acceptBackup,
+  getCallSession
 };

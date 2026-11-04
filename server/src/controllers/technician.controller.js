@@ -1,5 +1,8 @@
 const technicianService = require('../services/technician.service');
 const reviewService = require('../services/review.service');
+const technicianWalletService = require('../services/technicianWallet.service');
+const backupTechnicianService = require('../services/backupTechnician.service');
+const bookingRepo = require('../repositories/booking.repository');
 const apiResponse = require('../utils/apiResponse');
 
 async function getProfile(req, res, next) {
@@ -167,6 +170,58 @@ async function getDocuments(req, res, next) {
   }
 }
 
+
+async function getWallet(req, res, next) {
+  try {
+    const summary = await technicianWalletService.getWalletSummary(req.user.id);
+    return apiResponse.success(res, summary, 'Technician wallet summary retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getWalletTransactions(req, res, next) {
+  try {
+    const result = await technicianWalletService.getTransactions(req.user.id, req.query);
+    return apiResponse.paginated(
+      res,
+      result.transactions,
+      result.pagination,
+      'Technician wallet transactions retrieved'
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function settleCashCommission(req, res, next) {
+  try {
+    const { amount } = req.body;
+    const result = await technicianWalletService.settleOutstandingCommission(req.user.id, amount);
+    return apiResponse.success(res, result, 'Commission settlement recorded successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getOngoingBookings(req, res, next) {
+  try {
+    const bookings = await bookingRepo.findOngoingByTechnicianId(req.user.id);
+    return apiResponse.success(res, bookings, 'Ongoing bookings retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getIncomingBackupRequests(req, res, next) {
+  try {
+    const requests = await backupTechnicianService.getIncomingBackupRequests(req.user.id);
+    return apiResponse.success(res, requests, 'Incoming backup requests retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getProfile,
   getById,
@@ -181,5 +236,10 @@ module.exports = {
   getSkills,
   updateLocation,
   uploadDocument,
-  getDocuments
+  getDocuments,
+  getWallet,
+  getWalletTransactions,
+  settleCashCommission,
+  getOngoingBookings,
+  getIncomingBackupRequests
 };

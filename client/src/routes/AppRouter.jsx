@@ -55,6 +55,9 @@ const JobCompletion = lazy(() => import('../pages/technician/JobCompletion'));
 const Earnings = lazy(() => import('../pages/technician/Earnings'));
 const TechnicianReviews = lazy(() => import('../pages/technician/Reviews'));
 const VerificationStatus = lazy(() => import('../pages/technician/VerificationStatus'));
+const OngoingWork = lazy(() => import('../pages/technician/OngoingWork'));
+const TechnicianWallet = lazy(() => import('../pages/technician/Wallet'));
+const BackupRequests = lazy(() => import('../pages/technician/BackupRequests'));
 
 // Lazy-loaded Admin Pages
 const AdminLogin = lazy(() => import('../pages/admin/AdminLogin'));
@@ -140,6 +143,9 @@ export default function AppRouter() {
           <Route path="/technician/estimates/new/:bookingId" element={<EstimateSubmission />} />
           <Route path="/technician/active-job/:id" element={<ActiveJob />} />
           <Route path="/technician/jobs/:id/complete" element={<JobCompletion />} />
+          <Route path="/technician/ongoing" element={<OngoingWork />} />
+          <Route path="/technician/backup-requests" element={<BackupRequests />} />
+          <Route path="/technician/wallet" element={<TechnicianWallet />} />
           <Route path="/technician/earnings" element={<Earnings />} />
           <Route path="/technician/reviews" element={<TechnicianReviews />} />
           <Route path="/technician/verification" element={<VerificationStatus />} />

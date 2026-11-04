@@ -7,11 +7,15 @@ import Button from '../../components/common/Button';
 import Spinner from '../../components/common/Spinner';
 import InteractiveMap from '../../components/common/InteractiveMap';
 import { formatCurrency, formatDateTime } from '../../utils/formatters';
+import { useCall } from '../../context/CallContext';
 import { showToast } from '../../components/common/Toast';
 import {
   Clock,
   MapPin,
   Phone,
+  Video,
+  ShieldAlert,
+  Send,
   Navigation,
   CheckCircle2,
   AlertTriangle,
@@ -28,6 +32,11 @@ import {
 export default function ActiveJob() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { startCall } = useCall();
+  const [showBackupModal, setShowBackupModal] = useState(false);
+  const [backupReason, setBackupReason] = useState('VEHICLE_BREAKDOWN');
+  const [backupExplanation, setBackupExplanation] = useState('');
+  const [submittingBackup, setSubmittingBackup] = useState(false);
 
   const [booking, setBooking] = useState(null);
   const [timeline, setTimeline] = useState([]);
@@ -169,6 +178,25 @@ export default function ActiveJob() {
       showToast.error(err.message || 'Invalid PIN verification');
     } finally {
       setVerifyingPin(false);
+    }
+  };
+
+  const handleRequestBackup = async (e) => {
+    e.preventDefault();
+    try {
+      setSubmittingBackup(true);
+      await bookingsApi.requestBackup(id, {
+        reason: backupReason,
+        explanation: backupExplanation
+      });
+      showToast.success('Backup technician request dispatched to nearby technicians');
+      setShowBackupModal(false);
+      setBackupExplanation('');
+      fetchJob();
+    } catch (err) {
+      showToast.error(err.message || 'Failed to request backup technician');
+    } finally {
+      setSubmittingBackup(false);
     }
   };
 
@@ -473,6 +501,20 @@ export default function ActiveJob() {
             </div>
           )}
 
+          {['ACCEPTED', 'ON_THE_WAY', 'ARRIVED', 'IN_PROGRESS'].includes(booking.status) && (
+            <div className="col-span-full pt-3 mt-1 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-xs text-slate-500">Cannot reach location or facing unexpected delay?</span>
+              <button
+                type="button"
+                onClick={() => setShowBackupModal(true)}
+                className="px-3 py-1.5 rounded-lg text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-xs font-bold flex items-center gap-1.5 transition"
+              >
+                <ShieldAlert className="w-3.5 h-3.5" />
+                <span>Request Backup Technician</span>
+              </button>
+            </div>
+          )}
+
           {booking.status === 'COMPLETED' && (
             <div className="col-span-full p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-bold flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
@@ -492,14 +534,46 @@ export default function ActiveJob() {
             <p className="text-sm font-bold text-slate-800">
               {booking.customer_name || 'Customer'}
             </p>
-            {booking.customer_phone && (
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              {booking.customer_phone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-fixteal-600" />
+                  <a href={`tel:${booking.customer_phone}`} className="font-semibold text-fixblue-900 hover:underline">
+                    {booking.customer_phone}
+                  </a>
+                </div>
+              )}
               <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-fixteal-600" />
-                <a href={`tel:${booking.customer_phone}`} className="font-semibold text-fixblue-900 hover:underline">
-                  {booking.customer_phone}
-                </a>
+                <button
+                  type="button"
+                  onClick={() => startCall({
+                    bookingId: booking.id,
+                    recipientId: booking.customer_id,
+                    recipientName: booking.customer_name,
+                    callType: 'voice'
+                  })}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold text-xs flex items-center gap-1.5 border border-emerald-200 transition"
+                  title="Voice Call Customer"
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  <span>Call</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => startCall({
+                    bookingId: booking.id,
+                    recipientId: booking.customer_id,
+                    recipientName: booking.customer_name,
+                    callType: 'video'
+                  })}
+                  className="px-3 py-1.5 rounded-lg bg-fixblue-50 text-fixblue-700 hover:bg-fixblue-100 font-semibold text-xs flex items-center gap-1.5 border border-fixblue-200 transition"
+                  title="Video Call Customer"
+                >
+                  <Video className="w-3.5 h-3.5" />
+                  <span>Video</span>
+                </button>
               </div>
-            )}
+            </div>
             <div className="flex items-start gap-2 pt-2 border-t border-slate-100">
               <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
               <p>{booking.customer_address}</p>
@@ -540,6 +614,77 @@ export default function ActiveJob() {
           </div>
         </div>
       </div>
+      {/* BACKUP MODAL */}
+      {showBackupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 animate-fade-in">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-rose-600 font-bold text-base">
+                <ShieldAlert className="w-5 h-5" />
+                <span>Request Emergency Backup</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBackupModal(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleRequestBackup} className="mt-4 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Reason for Backup <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={backupReason}
+                  onChange={(e) => setBackupReason(e.target.value)}
+                  className="w-full text-sm rounded-xl border border-slate-300 p-2.5 focus:border-fixblue-500 focus:outline-hidden"
+                >
+                  <option value="VEHICLE_BREAKDOWN">Vehicle Breakdown / Puncture</option>
+                  <option value="DELAYED_AT_PREVIOUS_JOB">Delayed at Previous Job</option>
+                  <option value="PERSONAL_EMERGENCY">Personal / Family Emergency</option>
+                  <option value="TOOL_EQUIPMENT_FAILURE">Tool / Equipment Failure</option>
+                  <option value="DISTANCE_OR_TRAFFIC">Severe Traffic / Road Blockage</option>
+                  <option value="OTHER">Other Urgent Reason</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Explanation / Notes for Backup Pro
+                </label>
+                <textarea
+                  value={backupExplanation}
+                  onChange={(e) => setBackupExplanation(e.target.value)}
+                  placeholder="Describe your situation so nearby technician can take over smoothly..."
+                  rows={3}
+                  className="w-full text-sm rounded-xl border border-slate-300 p-2.5 focus:border-fixblue-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBackupModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-sm font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingBackup}
+                  className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold shadow-md shadow-rose-600/20 disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>{submittingBackup ? 'Dispatching...' : 'Dispatch Backup'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -80,7 +80,7 @@ router.get(
 router.post(
   '/:id/verify-pin',
   verifyToken,
-  authorize(ROLES.TECHNICIAN),
+  authorize(ROLES.TECHNICIAN, ROLES.CUSTOMER),
   bookingController.verifyPin
 );
 
@@ -88,6 +88,36 @@ router.post(
   '/:id/payment',
   verifyToken,
   bookingController.processPayment
+);
+
+// Backup Technician Workflow
+router.post(
+  '/:id/backup/request',
+  verifyToken,
+  authorize(ROLES.TECHNICIAN),
+  bookingController.requestBackup
+);
+
+router.get(
+  '/:id/backup/status',
+  verifyToken,
+  authorize(ROLES.TECHNICIAN, ROLES.CUSTOMER, ROLES.ADMIN),
+  bookingController.getBackupStatus
+);
+
+router.post(
+  '/backup/:requestId/accept',
+  verifyToken,
+  authorize(ROLES.TECHNICIAN),
+  bookingController.acceptBackup
+);
+
+// Call Sessions
+router.get(
+  '/:id/call-session',
+  verifyToken,
+  authorize(ROLES.TECHNICIAN, ROLES.CUSTOMER, ROLES.ADMIN),
+  bookingController.getCallSession
 );
 
 module.exports = router;

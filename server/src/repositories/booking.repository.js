@@ -447,12 +447,56 @@ async function addStatusHistory(historyData, conn = pool) {
   return result.insertId;
 }
 
+/**
+ * Find active ongoing bookings for a technician
+ * @param {number} technicianId
+ * @param {Object} [conn=pool]
+ */
+async function findOngoingByTechnicianId(technicianId, conn = pool) {
+  const ongoingStatuses = [
+    'ACCEPTED',
+    'ON_THE_WAY',
+    'ARRIVED',
+    'IN_PROGRESS',
+    'AWAITING_APPROVAL',
+    'AWAITING_CUSTOMER_VERIFICATION'
+  ];
+
+  const query = `
+    SELECT b.*,
+           sc.name AS service_name,
+           sc.name AS category_name, sc.slug AS category_slug, sc.icon AS category_icon,
+           c.first_name AS customer_first_name, c.last_name AS customer_last_name,
+           CASE WHEN c.id IS NOT NULL THEN TRIM(CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, ''))) ELSE NULL END AS customer_name,
+           c.phone AS customer_phone,
+           pe.id AS latest_estimate_id,
+           pe.total_estimate,
+           pe.status AS estimate_status
+    FROM bookings b
+    JOIN service_categories sc ON sc.id = b.category_id
+    JOIN users c ON c.id = b.customer_id
+    LEFT JOIN (
+      SELECT booking_id, MAX(id) AS max_est_id
+      FROM price_estimates
+      GROUP BY booking_id
+    ) latest_est ON latest_est.booking_id = b.id
+    LEFT JOIN price_estimates pe ON pe.id = latest_est.max_est_id
+    WHERE b.technician_id = ?
+      AND b.status IN (${ongoingStatuses.map(() => '?').join(', ')})
+    ORDER BY b.updated_at DESC, b.id DESC
+  `;
+
+  const [rows] = await conn.query(query, [technicianId, ...ongoingStatuses]);
+  return rows;
+}
+
 module.exports = {
   create,
   findById,
   findByBookingNumber,
   findByCustomerId,
   findByTechnicianId,
+  findOngoingByTechnicianId,
   updateStatus,
   updateTechnician,
   cancel,

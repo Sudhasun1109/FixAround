@@ -57,6 +57,15 @@ router.post(
   validate(verifyTechnicianValidation),
   technicianController.verify
 );
+// Technician Wallet & Commission Ledger
+router.get('/wallet', verifyToken, authorize(ROLES.TECHNICIAN), technicianController.getWallet);
+router.get('/wallet/transactions', verifyToken, authorize(ROLES.TECHNICIAN), technicianController.getWalletTransactions);
+router.post('/wallet/settle-cash', verifyToken, authorize(ROLES.TECHNICIAN), technicianController.settleCashCommission);
+
+// Ongoing In-Flight Bookings & Backup Requests
+router.get('/ongoing-bookings', verifyToken, authorize(ROLES.TECHNICIAN), technicianController.getOngoingBookings);
+router.get('/backup-requests', verifyToken, authorize(ROLES.TECHNICIAN), technicianController.getIncomingBackupRequests);
+
 router.get('/:id', technicianController.getById);
 router.get('/', technicianController.getAll);
 
