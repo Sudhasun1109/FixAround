@@ -23,6 +23,8 @@ import {
   FileText,
   ChevronDown,
   ChevronRight,
+  ShieldAlert,
+  Wallet,
 } from 'lucide-react';
 
 export default function Sidebar({ className = '' }) {
@@ -82,17 +84,25 @@ export default function Sidebar({ className = '' }) {
     if (user?.role === ROLES.TECHNICIAN) {
       return [
         {
-          title: 'Workspace',
+          title: 'Service Operations',
           items: [
             { label: 'Dashboard', path: '/technician/dashboard', icon: LayoutDashboard },
-            { label: 'Incoming Requests', path: '/technician/requests', icon: Clock },
+            { label: 'New Requests', path: '/technician/requests', icon: Clock },
+            { label: 'Ongoing Work', path: '/technician/ongoing', icon: Wrench, badge: 'Active', badgeColor: 'bg-emerald-500 text-white' },
+            { label: 'Backup Requests', path: '/technician/backup-requests', icon: ShieldAlert, badge: 'Live', badgeColor: 'bg-rose-500 text-white' },
+          ],
+        },
+        {
+          title: 'Finance & Wallet',
+          items: [
+            { label: 'Technician Wallet', path: '/technician/wallet', icon: Wallet },
             { label: 'Earnings & Payouts', path: '/technician/earnings', icon: DollarSign },
-            { label: 'Client Reviews', path: '/technician/reviews', icon: Star },
           ],
         },
         {
           title: 'Professional Profile',
           items: [
+            { label: 'Client Reviews', path: '/technician/reviews', icon: Star },
             { label: 'Profile Information', path: '/technician/profile', icon: User },
             { label: 'My Skills & Services', path: '/technician/skills', icon: Wrench },
             { label: 'Working Availability', path: '/technician/availability', icon: Clock },

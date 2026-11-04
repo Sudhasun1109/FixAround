@@ -4,6 +4,7 @@ const app = require('./app');
 const config = require('./config/env');
 const { testConnection, pool } = require('./config/database');
 const { startAssignmentExpiryJob } = require('./jobs/assignmentExpiry.job');
+const { setupCallSignaling } = require('./sockets/callSignaling');
 
 
 
@@ -35,6 +36,9 @@ io.on('connection', (socket) => {
     console.log(`[Socket.IO] Client disconnected: ${socket.id}`);
   });
 });
+
+// Initialize WebRTC signaling for voice and video calls
+setupCallSignaling(io);
 
 // Make io accessible across app if needed
 app.set('io', io);

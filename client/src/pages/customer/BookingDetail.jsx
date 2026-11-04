@@ -7,6 +7,7 @@ import Spinner from '../../components/common/Spinner';
 import ReviewForm from '../../components/review/ReviewForm';
 import InteractiveMap from '../../components/common/InteractiveMap';
 import { formatCurrency, formatDateTime } from '../../utils/formatters';
+import { useCall } from '../../context/CallContext';
 import { showToast } from '../../components/common/Toast';
 import {
   Calendar,
@@ -21,6 +22,7 @@ import {
   Receipt,
   ShieldCheck,
   Phone,
+  Video,
   MessageSquare,
   Navigation,
   Heart,
@@ -34,6 +36,7 @@ import {
 export default function BookingDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { startCall } = useCall();
 
   const [booking, setBooking] = useState(null);
   const [timeline, setTimeline] = useState([]);
@@ -443,7 +446,7 @@ export default function BookingDetail() {
                 ))}
               </div>
 
-              <div className="flex items-center justify-center gap-2 pt-1">
+              <div className="flex items-center justify-center gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -454,11 +457,30 @@ export default function BookingDetail() {
                       setTimeout(() => setPinCopied(false), 2500);
                     }
                   }}
-                  className="px-4 py-1.5 rounded-full bg-white/15 hover:bg-white/25 text-xs font-bold text-white flex items-center gap-1.5 transition-colors"
+                  className="px-4 py-2 rounded-full bg-white/15 hover:bg-white/25 text-xs font-bold text-white flex items-center gap-1.5 transition-colors"
                 >
                   <Copy className="w-3.5 h-3.5" />
                   <span>{pinCopied ? 'PIN Copied!' : 'Copy PIN'}</span>
                 </button>
+
+                {pinData?.pin && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await bookingsApi.verifyPin(id, pinData.pin);
+                        showToast.success('Job verified successfully! Proceeding to payment.');
+                        loadBookingData();
+                      } catch (err) {
+                        showToast.error(err.message || 'Failed to verify PIN');
+                      }
+                    }}
+                    className="px-5 py-2 rounded-full bg-emerald-500 hover:bg-emerald-600 text-xs font-bold text-white flex items-center gap-1.5 shadow-md transition-colors"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Confirm & Complete Job</span>
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -593,35 +615,47 @@ export default function BookingDetail() {
 
         {/* Call & Chat Circular Buttons */}
         <div className="flex items-center gap-2">
+          {/* Voice Call */}
           <button
             type="button"
             onClick={() => {
-              showToast.info('Connecting to live technician support chat...');
+              if (booking.technician_id) {
+                startCall({
+                  bookingId: booking.id,
+                  recipientId: booking.technician_id,
+                  recipientName: booking.technician_name,
+                  callType: 'voice'
+                });
+              } else {
+                showToast.info('Specialist not yet assigned');
+              }
             }}
-            className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors"
-            title="Chat with Technician"
+            className="w-10 h-10 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/25 transition-all"
+            title="Voice Call Specialist"
           >
-            <MessageSquare className="w-4 h-4" />
+            <Phone className="w-4 h-4" />
           </button>
 
-          {booking.technician_phone ? (
-            <a
-              href={`tel:${booking.technician_phone}`}
-              className="w-10 h-10 rounded-full bg-fixblue-500 hover:bg-fixblue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25 transition-all"
-              title="Call Technician"
-            >
-              <Phone className="w-4 h-4" />
-            </a>
-          ) : (
-            <button
-              type="button"
-              onClick={() => showToast.info('Specialist contact active via dispatcher.')}
-              className="w-10 h-10 rounded-full bg-fixblue-500 hover:bg-fixblue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25 transition-all"
-              title="Call Technician"
-            >
-              <Phone className="w-4 h-4" />
-            </button>
-          )}
+          {/* Video Call */}
+          <button
+            type="button"
+            onClick={() => {
+              if (booking.technician_id) {
+                startCall({
+                  bookingId: booking.id,
+                  recipientId: booking.technician_id,
+                  recipientName: booking.technician_name,
+                  callType: 'video'
+                });
+              } else {
+                showToast.info('Specialist not yet assigned');
+              }
+            }}
+            className="w-10 h-10 rounded-full bg-fixblue-600 hover:bg-fixblue-700 text-white flex items-center justify-center shadow-md shadow-blue-600/25 transition-all"
+            title="Video Call Specialist"
+          >
+            <Video className="w-4 h-4" />
+          </button>
         </div>
       </div>
 

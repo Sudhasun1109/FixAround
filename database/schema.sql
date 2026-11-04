@@ -43,6 +43,7 @@ CREATE TABLE customer_profiles (
   default_address_id INT UNSIGNED DEFAULT NULL,
   preferred_language VARCHAR(10) DEFAULT 'en',
   wallet_balance DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  reward_points INT UNSIGNED NOT NULL DEFAULT 0,
   notes TEXT DEFAULT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -191,6 +192,8 @@ CREATE TABLE bookings (
   cancelled_by ENUM('customer','technician','admin','system') DEFAULT NULL,
   estimated_total DECIMAL(12,2) DEFAULT NULL,
   final_total DECIMAL(12,2) DEFAULT NULL,
+  payment_method VARCHAR(50) DEFAULT NULL,
+  payment_status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
   commission_amount DECIMAL(12,2) DEFAULT NULL,
   technician_payout DECIMAL(12,2) DEFAULT NULL,
   assignment_attempts INT UNSIGNED NOT NULL DEFAULT 0,
@@ -557,4 +560,98 @@ CREATE TABLE IF NOT EXISTS wallet_transactions (
   CONSTRAINT fk_wt_customer FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_wt_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE SET NULL,
   CONSTRAINT fk_wt_claim FOREIGN KEY (claim_id) REFERENCES warranty_claims(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- 24. reward_points_history — Customer loyalty reward tracking
+-- ============================================================
+CREATE TABLE IF NOT EXISTS reward_points_history (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  customer_id INT UNSIGNED NOT NULL,
+  booking_id INT UNSIGNED DEFAULT NULL,
+  points INT NOT NULL,
+  type ENUM('EARNED','REDEEMED','EXPIRED','ADJUSTMENT') NOT NULL DEFAULT 'EARNED',
+  description VARCHAR(255) DEFAULT NULL,
+  balance_after INT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_rph_customer (customer_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- 25. call_sessions — WebRTC voice & video communication
+-- ============================================================
+CREATE TABLE IF NOT EXISTS call_sessions (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  booking_id INT UNSIGNED NOT NULL,
+  caller_id INT UNSIGNED NOT NULL,
+  receiver_id INT UNSIGNED NOT NULL,
+  call_type ENUM('voice', 'video') NOT NULL DEFAULT 'voice',
+  status ENUM('initiated', 'ringing', 'connected', 'rejected', 'missed', 'ended', 'failed') NOT NULL DEFAULT 'initiated',
+  started_at DATETIME DEFAULT NULL,
+  ended_at DATETIME DEFAULT NULL,
+  duration_seconds INT UNSIGNED NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_cs_booking (booking_id),
+  INDEX idx_cs_caller (caller_id),
+  INDEX idx_cs_receiver (receiver_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- 26. backup_technician_requests — Seamless tech reassignment
+-- ============================================================
+CREATE TABLE IF NOT EXISTS backup_technician_requests (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  booking_id INT UNSIGNED NOT NULL,
+  original_technician_id INT UNSIGNED NOT NULL,
+  accepted_technician_id INT UNSIGNED DEFAULT NULL,
+  reason ENUM('VEHICLE_BREAKDOWN', 'DELAYED_AT_PREVIOUS_JOB', 'PERSONAL_EMERGENCY', 'TOOL_EQUIPMENT_FAILURE', 'DISTANCE_OR_TRAFFIC', 'OTHER') NOT NULL,
+  explanation TEXT DEFAULT NULL,
+  status ENUM('PENDING', 'ACCEPTED', 'EXPIRED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
+  expires_at DATETIME DEFAULT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_btr_booking (booking_id),
+  INDEX idx_btr_orig_tech (original_technician_id),
+  INDEX idx_btr_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- 27. technician_wallets — Technician earnings & 15% commission liability
+-- ============================================================
+CREATE TABLE IF NOT EXISTS technician_wallets (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  technician_id INT UNSIGNED NOT NULL,
+  available_balance DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  outstanding_commission DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  total_cash_collected DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  total_online_earnings DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  total_commission_paid DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_tw_tech (technician_id),
+  INDEX idx_tw_tech (technician_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- 28. technician_wallet_transactions — Financial ledger
+-- ============================================================
+CREATE TABLE IF NOT EXISTS technician_wallet_transactions (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  technician_id INT UNSIGNED NOT NULL,
+  booking_id INT UNSIGNED DEFAULT NULL,
+  transaction_type ENUM('CASH_COLLECTED', 'ONLINE_PAYOUT', 'COMMISSION_CHARGE', 'COMMISSION_SETTLEMENT', 'WITHDRAWAL', 'ADJUSTMENT') NOT NULL,
+  payment_method ENUM('CASH', 'ONLINE', 'WALLET', 'SYSTEM') NOT NULL DEFAULT 'SYSTEM',
+  gross_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  commission_rate DECIMAL(5,2) NOT NULL DEFAULT 15.00,
+  commission_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  previous_outstanding DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  commission_deducted DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  net_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  new_outstanding DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  new_available_balance DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  description VARCHAR(500) DEFAULT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_twt_tech (technician_id),
+  INDEX idx_twt_booking (booking_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

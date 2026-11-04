@@ -89,6 +89,11 @@ export const techniciansApi = {
   updateSkills: (skills) => api.put('/technicians/skills', { skills }),
   uploadDocument: (data) => api.post('/technicians/documents', data),
   getDocuments: () => api.get('/technicians/documents'),
+  getWallet: () => api.get('/technicians/wallet'),
+  getWalletTransactions: (params) => api.get('/technicians/wallet/transactions', { params }),
+  settleCashCommission: (amount) => api.post('/technicians/wallet/settle-cash', { amount }),
+  getOngoingBookings: () => api.get('/technicians/ongoing-bookings'),
+  getBackupRequests: () => api.get('/technicians/backup-requests'),
 };
 
 // Bookings API
@@ -108,6 +113,10 @@ export const bookingsApi = {
   getVerificationPin: (id) => api.get(`/bookings/${id}/verification-pin`),
   verifyPin: (id, pin) => api.post(`/bookings/${id}/verify-pin`, { pin }),
   processPayment: (id, data) => api.post(`/bookings/${id}/payment`, data),
+  requestBackup: (id, data) => api.post(`/bookings/${id}/backup/request`, data),
+  getBackupStatus: (id) => api.get(`/bookings/${id}/backup/status`),
+  acceptBackup: (requestId) => api.post(`/bookings/backup/${requestId}/accept`),
+  getCallSession: (id) => api.get(`/bookings/${id}/call-session`),
 };
 
 // Estimates API

@@ -1,5 +1,7 @@
 import React from 'react';
 import { NotificationProvider } from './context/NotificationContext';
+import { CallProvider } from './context/CallContext';
+import CallModal from './components/call/CallModal';
 import AppRouter from './routes/AppRouter';
 import { ToastContainer } from './components/common/Toast';
 import ErrorBoundary from './components/common/ErrorBoundary';
@@ -9,9 +11,12 @@ export default function App() {
   return (
     <ErrorBoundary>
       <NotificationProvider>
-        <AppRouter />
-        <PWAInstallPrompt />
-        <ToastContainer />
+        <CallProvider>
+          <AppRouter />
+          <CallModal />
+          <PWAInstallPrompt />
+          <ToastContainer />
+        </CallProvider>
       </NotificationProvider>
     </ErrorBoundary>
   );
