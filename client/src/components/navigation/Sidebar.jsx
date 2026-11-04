@@ -23,6 +23,8 @@ import {
   FileText,
   ChevronDown,
   ChevronRight,
+  ShieldAlert,
+  Wallet,
 } from 'lucide-react';
 
 export default function Sidebar({ className = '' }) {
